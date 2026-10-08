@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login / Signup - EduFinance</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Firebase Compat SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+</head>
+<body class="auth-body">
+    <div class="auth-wrapper">
+        <div class="auth-card">
+            <div class="auth-header text-center mb-4">
+                <a href="index.html" class="logo justify-content-center mb-2" style="text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <i class="fa-solid fa-graduation-cap logo-icon" style="font-size: 1.8rem; color: var(--primary);"></i>
+                    <span style="font-size: 1.5rem; font-weight: 700; color: var(--text-main);">EduFinance</span>
+                </a>
+                <h2 id="authTitle" style="font-size: 1.35rem; font-weight: 700; color: var(--text-main); margin-top: 10px;">Welcome Back</h2>
+                <p class="subtitle" id="authSub">Sign in to access your student budget tracker</p>
+            </div>
+
+            <!-- Prominent Google Login Button -->
+            <button type="button" class="btn btn-secondary-outline btn-full mb-3" id="googleLoginBtn" style="justify-content: center; font-weight: 600; padding: 14px;">
+                <i class="fa-brands fa-google text-danger" style="font-size: 1.1rem;"></i> Continue with Google
+            </button>
+            <div class="text-center text-muted" style="font-size: 0.85rem; margin-bottom: 20px;" id="dividerText">— or sign in with email —</div>
+
+            <form id="authPageForm" class="form">
+                <!-- Signup Extra Fields (Step 6) -->
+                <div id="signupFieldsContainer" style="display: none; flex-direction: column; gap: 16px;">
+                    <div class="form-group">
+                        <label for="usernameInput">Username</label>
+                        <input type="text" id="usernameInput" class="form-control" placeholder="e.g. EnnyScholar">
+                    </div>
+                    <div class="form-group-row">
+                        <div class="form-group flex-1">
+                            <label for="firstNameInput">First Name</label>
+                            <input type="text" id="firstNameInput" class="form-control" placeholder="Enny">
+                        </div>
+                        <div class="form-group flex-1">
+                            <label for="lastNameInput">Last Name</label>
+                            <input type="text" id="lastNameInput" class="form-control" placeholder="Student">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="dobInput">Date of Birth <span class="text-danger">*Must be 13 or older</span></label>
+                        <input type="date" id="dobInput" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="currencyInput">Currency</label>
+                        <select id="currencyInput" class="form-control"></select>
+                        <small class="text-muted" id="currencyHint" style="font-size: 0.8rem;">Detected from your device. Change it if it's wrong.</small>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="emailInput">Student Email</label>
+                    <input type="email" id="emailInput" class="form-control" placeholder="student@university.edu" required>
+                </div>
+                <div class="form-group">
+                    <label for="passwordInput">Password</label>
+                    <input type="password" id="passwordInput" class="form-control" placeholder="••••••••" required minlength="6">
+                </div>
+
+                <!-- Confirm Password Field for Signup Only -->
+                <div class="form-group" id="confirmPasswordGroup" style="display: none;">
+                    <label for="confirmPasswordInput">Confirm Password</label>
+                    <input type="password" id="confirmPasswordInput" class="form-control" placeholder="••••••••">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-full mt-3" id="authActionBtn">Login</button>
+            </form>
+
+            <div class="text-center mt-4" id="switchContainer">
+                <p id="switchAuthText" style="font-size: 0.9rem;">
+                    <span id="switchPromptText">Don't have an account?</span> <a href="#" id="switchModeLink" class="text-primary font-weight-bold" style="text-decoration: none;">Sign Up</a>
+                </p>
+                <p class="mt-3"><a href="dashboard.html" class="text-muted" style="font-size: 0.85rem; text-decoration: none;">Continue as Guest / Demo Mode &rarr;</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Google Missing Info Modal -->
+    <div class="modal-backdrop" id="googleInfoModal">
+        <div class="modal" style="max-width: 420px;">
+            <div class="modal-header">
+                <h3>Complete Your Profile</h3>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3" style="font-size: 0.9rem;">Welcome! Please provide a few extra details to finish setting up your EduFinance account.</p>
+                <form id="googleInfoForm" class="form">
+                    <div class="form-group">
+                        <label for="googleUsername">Username</label>
+                        <input type="text" id="googleUsername" class="form-control" required placeholder="e.g. EnnyScholar">
+                    </div>
+                    <div class="form-group-row">
+                        <div class="form-group flex-1">
+                            <label for="googleFirstName">First Name</label>
+                            <input type="text" id="googleFirstName" class="form-control" placeholder="Enny">
+                        </div>
+                        <div class="form-group flex-1">
+                            <label for="googleLastName">Last Name</label>
+                            <input type="text" id="googleLastName" class="form-control" placeholder="Student">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="googleDob">Date of Birth <span class="text-danger">*Must be 13 or older</span></label>
+                        <input type="date" id="googleDob" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="googleCurrency">Currency</label>
+                        <select id="googleCurrency" class="form-control"></select>
+                        <small class="text-muted" style="font-size: 0.8rem;">Detected from your device. Change it if it's wrong.</small>
+                    </div>
+                    <div class="modal-footer" style="margin-top: 20px;">
+                        <button type="submit" class="btn btn-primary btn-full">
+                            Complete Setup & Continue
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastNotification" class="toast">
+        <span class="toast-icon" id="toastIcon"><i class="fa-solid fa-circle-info"></i></span>
+        <span class="toast-message" id="toastMessage">Message here...</span>
+    </div>
+
+    <script src="currency.js"></script>
+    <script src="auth.js"></script>
+</body>
+</html>

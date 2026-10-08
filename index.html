@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduFinance - Smart Student Finance & Budget Tracker</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="landing-auth-wrapper">
+        <!-- Landing Header -->
+        <header class="landing-header">
+            <div class="logo">
+                <i class="fa-solid fa-graduation-cap logo-icon"></i>
+                <span>EduFinance</span>
+            </div>
+            <nav style="display: flex; gap: 24px; align-items: center;" class="landing-nav-links">
+                <a href="#features" class="text-muted" style="text-decoration: none; font-weight: 500;">Features</a>
+                <a href="#aim" class="text-muted" style="text-decoration: none; font-weight: 500;">Aim & Purpose</a>
+                <a href="#faq" class="text-muted" style="text-decoration: none; font-weight: 500;">FAQ</a>
+                <a href="contact.html" class="text-muted" style="text-decoration: none; font-weight: 500;">Contact</a>
+            </nav>
+            <div class="landing-nav-actions">
+                <a href="login.html" class="btn btn-secondary-outline btn-small">Login</a>
+                <a href="login.html" class="btn btn-primary btn-small">Get Started</a>
+            </div>
+        </header>
+
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-content">
+                <span class="badge badge-income mb-3"><i class="fa-solid fa-bolt"></i> Smart Student Finance Tracker</span>
+                <h1>Master Your Student Budget & Loans with Ease</h1>
+                <p>Track your tuition, dorm rent, textbook purchases, part-time income, and semester cashflow in one beautiful, mobile-friendly app powered by cloud sync.</p>
+                <div class="hero-buttons">
+                    <a href="login.html" class="btn btn-primary btn-large">
+                        <i class="fa-solid fa-rocket"></i> Start Tracking Free
+                    </a>
+                    <a href="dashboard.html" class="btn btn-secondary-outline btn-large">
+                        <i class="fa-solid fa-database"></i> Explore Demo
+                    </a>
+                </div>
+            </div>
+            <div class="hero-card-preview">
+                <div class="card preview-card-glow">
+                    <div class="stat-header">
+                        <span class="stat-label">Semester Cashflow Forecast</span>
+                        <i class="fa-solid fa-wallet text-primary"></i>
+                    </div>
+                    <div class="stat-value text-success">$2,450.00</div>
+                    <p class="text-muted" style="font-size: 0.85rem; margin-top: 8px;">Safe weekly allowance calculated for 16 weeks.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Aim / Purpose Section -->
+        <section id="aim" style="padding: 60px 40px; background: var(--bg-card); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
+            <div style="max-width: 1000px; margin: 0 auto; text-align: center;">
+                <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 16px;">Our Aim & Purpose</h2>
+                <p style="font-size: 1.05rem; color: var(--text-muted); line-height: 1.7;">
+                    College and university students face unique financial pressures—bulk funding from student loans or grants, fluctuating semester expenses, and unpredictable living costs. EduFinance is built to empower students with intelligent cashflow forecasting, robust budgeting tools, and secure cloud tracking so you can focus on your education without financial anxiety.
+                </p>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" style="padding: 80px 40px; max-width: 1200px; margin: 0 auto;">
+            <div style="text-align: center; margin-bottom: 50px;">
+                <h2 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 12px;">Designed for Modern Students</h2>
+                <p style="color: var(--text-muted); font-size: 1.05rem;">Everything you need to stay on top of student finances.</p>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;">
+                <div class="card">
+                    <div class="stat-icon-wrapper bg-primary-light mb-3" style="margin-bottom: 16px;"><i class="fa-solid fa-scale-balanced text-primary"></i></div>
+                    <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 8px;">Semester Cashflow Planner</h3>
+                    <p class="text-muted" style="font-size: 0.95rem;">Map your bulk student funding across the term to calculate safe weekly allowances.</p>
+                </div>
+                <div class="card">
+                    <div class="stat-icon-wrapper bg-success-light mb-3" style="margin-bottom: 16px;"><i class="fa-solid fa-wallet text-success"></i></div>
+                    <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 8px;">Category Budgets</h3>
+                    <p class="text-muted" style="font-size: 0.95rem;">Set monthly spending limits for rent, groceries, and books with visual progress bars.</p>
+                </div>
+                <div class="card">
+                    <div class="stat-icon-wrapper bg-warning-light mb-3" style="margin-bottom: 16px;"><i class="fa-solid fa-piggy-bank text-warning"></i></div>
+                    <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 8px;">Savings Goals & Reports</h3>
+                    <p class="text-muted" style="font-size: 0.95rem;">Save for laptops and summer trips. Export transaction history to CSV or print PDF reports.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ Section -->
+        <section id="faq" style="padding: 60px 40px; background: var(--bg-card); border-top: 1px solid var(--border-color);">
+            <div style="max-width: 900px; margin: 0 auto;">
+                <h2 style="font-size: 2rem; font-weight: 800; text-align: center; margin-bottom: 40px;">Frequently Asked Questions</h2>
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="card" style="background: var(--bg-input);">
+                        <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 8px;">Is EduFinance free to use?</h3>
+                        <p class="text-muted" style="font-size: 0.95rem;">Yes! EduFinance is completely free for students to track budgets and semester finances.</p>
+                    </div>
+                    <div class="card" style="background: var(--bg-input);">
+                        <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 8px;">How does cloud sync work?</h3>
+                        <p class="text-muted" style="font-size: 0.95rem;">EduFinance uses Firebase to securely back up your transactions and settings across devices when signed in.</p>
+                    </div>
+                    <div class="card" style="background: var(--bg-input);">
+                        <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 8px;">Can I export my financial reports?</h3>
+                        <p class="text-muted" style="font-size: 0.95rem;">Yes, you can filter transactions by date range and export to CSV or print formatted PDF logs with your unique account ID.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer style="background: var(--bg-sidebar); border-top: 1px solid var(--border-color); padding: 40px; text-align: center; display: flex; flex-direction: column; gap: 20px; align-items: center;">
+            <div class="logo">
+                <i class="fa-solid fa-graduation-cap logo-icon"></i>
+                <span>EduFinance</span>
+            </div>
+            <div style="display: flex; gap: 24px; flex-wrap: wrap; justify-content: center;">
+                <a href="about.html" class="text-muted" style="text-decoration: none; font-size: 0.9rem;">About</a>
+                <a href="contact.html" class="text-muted" style="text-decoration: none; font-size: 0.9rem;">Contact</a>
+                <a href="privacy.html" class="text-muted" style="text-decoration: none; font-size: 0.9rem;">Privacy Policy</a>
+                <a href="terms.html" class="text-muted" style="text-decoration: none; font-size: 0.9rem;">Terms of Service</a>
+            </div>
+            <p class="text-muted" style="font-size: 0.85rem;">&copy; 2026 EduFinance. Empowering student financial success worldwide.</p>
+        </footer>
+    </div>
+</body>
+</html>

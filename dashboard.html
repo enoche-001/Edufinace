@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduFinance - Dashboard & Finance Tracker</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Firebase Compat SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="app-container" id="appContainer">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fa-solid fa-graduation-cap logo-icon"></i>
+                    <span>EduFinance</span>
+                </div>
+                <button class="close-sidebar-btn" id="closeSidebar" aria-label="Close Sidebar">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <nav class="sidebar-menu">
+                <a href="#" class="menu-item active" data-tab="dashboard">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="transactions">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Transactions</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="budgets">
+                    <i class="fa-solid fa-wallet"></i>
+                    <span>Budgets</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="savings">
+                    <i class="fa-solid fa-piggy-bank"></i>
+                    <span>Savings Goals</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="debts">
+                    <i class="fa-solid fa-handshake"></i>
+                    <span>Owe / Owed</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="projections">
+                    <i class="fa-solid fa-hourglass-half"></i>
+                    <span>Semester Planner</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="intelligence">
+                    <i class="fa-solid fa-brain"></i>
+                    <span>Financial Intelligence</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="profile">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span>Profile & Settings</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="loadDemoData" class="btn btn-secondary-outline btn-full">
+                    <i class="fa-solid fa-database"></i> Load Demo Data
+                </button>
+                <button id="logoutBtn" class="btn btn-secondary-outline btn-full">
+                    <i class="fa-solid fa-right-from-bracket"></i> Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="app-header">
+                <div class="header-left">
+                    <button class="mobile-toggle-btn" id="mobileToggle" aria-label="Open Navigation">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div>
+                        <h1 id="greetingHeading">Welcome back, Student</h1>
+                        <p class="subtitle" id="headerSubtitle">Here is your financial overview.</p>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="theme-toggle">
+                        <button id="themeToggleBtn" aria-label="Toggle Theme">
+                            <i class="fa-solid fa-moon"></i>
+                        </button>
+                    </div>
+                    <div class="user-profile">
+                        <div class="avatar" id="userAvatarDisplay">
+                            <i class="fa-solid fa-user-graduate"></i>
+                        </div>
+                        <span class="username">Student Wallet</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Tab Content -->
+            <section id="dashboard-tab" class="tab-content active">
+                <!-- Stat Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card total-balance">
+                        <div class="stat-header">
+                            <span class="stat-label">Current Balance</span>
+                            <div class="stat-icon-wrapper bg-primary-light">
+                                <i class="fa-solid fa-scale-balanced text-primary"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="totalBalance">0.00</div>
+                        <div class="stat-footer text-success" id="balanceStatus">
+                            <i class="fa-solid fa-circle-check"></i> Within safe spending range
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-label">Monthly Income</span>
+                            <div class="stat-icon-wrapper bg-success-light">
+                                <i class="fa-solid fa-arrow-trend-up text-success"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="monthlyIncome">0.00</div>
+                        <div class="stat-footer text-muted" id="incomeSub">
+                            From jobs, grants & allowance
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-label">Monthly Expenses</span>
+                            <div class="stat-icon-wrapper bg-danger-light">
+                                <i class="fa-solid fa-arrow-trend-down text-danger"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="monthlyExpenses">0.00</div>
+                        <div class="stat-footer text-muted" id="expensesSub">
+                            Rent, food, socials & school
+                        </div>
+                    </div>
+
+                    <div class="stat-card term-projection-card">
+                        <div class="stat-header">
+                            <span class="stat-label">End of Term Forecast</span>
+                            <div class="stat-icon-wrapper bg-warning-light">
+                                <i class="fa-solid fa-hourglass-half text-warning"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="termForecast">0.00</div>
+                        <div class="stat-footer" id="projectionStatus">
+                            <i class="fa-solid fa-circle-info"></i> Projections based on current spending
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Content Grid -->
+                <div class="dashboard-grid">
+                    <!-- Column Left: Transaction & Budget Quick Add -->
+                    <div class="dashboard-col">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2>Quick Add Transaction</h2>
+                            </div>
+                            <form id="quickAddForm" class="form">
+                                <div class="form-group-row">
+                                    <div class="form-group flex-1">
+                                        <label for="transType">Type</label>
+                                        <select id="transType" class="form-control" required>
+                                            <option value="expense" selected>Expense</option>
+                                            <option value="income">Income</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group flex-1">
+                                        <label for="transAmount">Amount</label>
+                                        <input type="number" id="transAmount" class="form-control" placeholder="0.00" min="0.01" step="0.01" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="transDesc">Description</label>
+                                    <input type="text" id="transDesc" class="form-control" placeholder="e.g. Groceries, Part-time shift, Books" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="transCategory">Category</label>
+                                    <select id="transCategory" class="form-control" required>
+                                        <!-- Will be populated dynamically based on type -->
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="transNote">Side Note / Details <span class="text-muted">(Optional)</span></label>
+                                    <input type="text" id="transNote" class="form-control" placeholder="e.g. Calculus 101 Book, Cinema">
+                                </div>
+                                <div class="form-group">
+                                    <label for="transDate">Date</label>
+                                    <input type="date" id="transDate" class="form-control" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-full">
+                                    <i class="fa-solid fa-plus"></i> Add Transaction
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Savings Goals Overview Widget -->
+                        <div class="card">
+                            <div class="card-header header-with-btn">
+                                <h2>Savings Goals</h2>
+                                <button class="btn btn-link btn-small nav-to-tab" data-target="savings">View All</button>
+                            </div>
+                            <div class="savings-widget-list" id="dashboardSavingsList">
+                                <!-- Populated dynamically -->
+                                <p class="text-muted text-center py-3">No active savings goals. Add one in the Savings Goals tab!</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column Right: Budgets and Recent Transactions -->
+                    <div class="dashboard-col col-span-2">
+                        <!-- Budget Spending Limit Progress Cards -->
+                        <div class="card">
+                            <div class="card-header header-with-btn">
+                                <h2>Monthly Budget Limits</h2>
+                                <button class="btn btn-link btn-small nav-to-tab" data-target="budgets">Manage Budgets</button>
+                            </div>
+                            <div class="budget-progress-grid" id="dashboardBudgetGrid">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Recent Transactions -->
+                        <div class="card">
+                            <div class="card-header header-with-btn">
+                                <h2>Recent Transactions</h2>
+                                <button class="btn btn-link btn-small nav-to-tab" data-target="transactions">View All</button>
+                            </div>
+                            <div class="table-container">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Description</th>
+                                            <th>Category</th>
+                                            <th>Date</th>
+                                            <th class="text-right">Amount</th>
+                                            <th class="text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dashboardTransactionsTable">
+                                        <!-- Populated dynamically -->
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted py-4">No transactions found. Use the Quick Add form to add some!</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Transactions Tab Content -->
+            <section id="transactions-tab" class="tab-content">
+                <div class="card">
+                    <div class="card-header filters-header">
+                        <h2>All Transactions & Exports</h2>
+                        <div class="filters-container">
+                            <div class="search-input-wrapper">
+                                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                                <input type="text" id="searchTrans" placeholder="Search description..." class="form-control">
+                            </div>
+                            <select id="filterCategory" class="form-control">
+                                <option value="all">All Categories</option>
+                            </select>
+                            <select id="filterType" class="form-control">
+                                <option value="all">All Types</option>
+                                <option value="income">Income</option>
+                                <option value="expense">Expense</option>
+                            </select>
+                            <select id="sortTrans" class="form-control">
+                                <option value="date-desc">Newest First</option>
+                                <option value="date-asc">Oldest First</option>
+                                <option value="amount-desc">Highest Amount</option>
+                                <option value="amount-asc">Lowest Amount</option>
+                            </select>
+                        </div>
+                        <!-- STEP 3 & 6: Date Range Filter & Export Buttons -->
+                        <div class="export-filters-bar" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="font-size: 0.85rem; font-weight: 600;">From:</label>
+                                <input type="date" id="exportStartDate" class="form-control" style="padding: 6px 12px;">
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="font-size: 0.85rem; font-weight: 600;">To:</label>
+                                <input type="date" id="exportEndDate" class="form-control" style="padding: 6px 12px;">
+                            </div>
+                            <div style="display: flex; gap: 10px; margin-left: auto;">
+                                <button type="button" id="exportCsvBtn" class="btn btn-secondary-outline btn-small">
+                                    <i class="fa-solid fa-file-csv"></i> Export CSV
+                                </button>
+                                <button type="button" id="exportPrintBtn" class="btn btn-primary btn-small">
+                                    <i class="fa-solid fa-print"></i> Print / PDF Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th>Category</th>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th class="text-right">Amount</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="allTransactionsTable">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-info" id="paginationInfo"></div>
+                </div>
+            </section>
+
+            <!-- Budgets Tab Content -->
+            <section id="budgets-tab" class="tab-content">
+                <div class="budget-setup-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Set Category Budgets</h2>
+                        </div>
+                        <p class="card-instruction">Set maximum monthly spending targets for specific expense categories.</p>
+                        <form id="budgetForm" class="form mt-3">
+                            <div class="form-group">
+                                <label for="budgetCategory">Expense Category</label>
+                                <select id="budgetCategory" class="form-control" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label for="budgetLimit">Monthly Limit</label>
+                                <input type="number" id="budgetLimit" class="form-control" placeholder="e.g. 300" min="1" step="1" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-full">
+                                <i class="fa-solid fa-floppy-disk"></i> Save Budget Target
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Active Monthly Budgets</h2>
+                        </div>
+                        <div class="budget-full-list" id="budgetFullList"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Savings Goals Tab Content -->
+            <section id="savings-tab" class="tab-content">
+                <div class="savings-grid-layout">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Create Savings Goal</h2>
+                        </div>
+                        <form id="savingsGoalForm" class="form">
+                            <div class="form-group">
+                                <label for="goalName">Goal Name</label>
+                                <input type="text" id="goalName" class="form-control" placeholder="e.g. Summer Vacation, Laptop" required>
+                            </div>
+                            <div class="form-group-row">
+                                <div class="form-group flex-1">
+                                    <label for="targetAmount">Target Amount</label>
+                                    <input type="number" id="targetAmount" class="form-control" placeholder="0.00" min="1" step="0.01" required>
+                                </div>
+                                <div class="form-group flex-1">
+                                    <label for="currentSaved">Initially Saved</label>
+                                    <input type="number" id="currentSaved" class="form-control" value="0" min="0" step="0.01">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="targetDate">Target Completion Date (Optional)</label>
+                                <input type="date" id="targetDate" class="form-control">
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-full">
+                                <i class="fa-solid fa-piggy-bank"></i> Add Savings Goal
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="savings-cards-container" id="savingsCardsContainer"></div>
+                </div>
+            </section>
+
+            <!-- Semester Planner Tab Content -->
+            <section id="debts-tab" class="tab-content">
+                <div class="debt-summary">
+                    <div class="card debt-sum owed"><span>People owe you</span><strong id="debtOwedTotal">0</strong></div>
+                    <div class="card debt-sum owe"><span>You owe</span><strong id="debtOweTotal">0</strong></div>
+                </div>
+                <div class="debts-grid">
+                    <div class="card">
+                        <div class="card-header"><h2>Add Record</h2></div>
+                        <form id="debtForm" class="form">
+                            <div class="seg" id="debtDir">
+                                <button type="button" class="seg-btn active" data-dir="owed_to_me">They owe me</button>
+                                <button type="button" class="seg-btn" data-dir="i_owe">I owe them</button>
+                            </div>
+                            <div class="form-group">
+                                <label for="debtPerson">Name</label>
+                                <input type="text" id="debtPerson" class="form-control" maxlength="60" placeholder="e.g. Tunde" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="debtAmount">Amount</label>
+                                <input type="number" id="debtAmount" class="form-control" placeholder="0.00" min="0.01" step="0.01" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="debtNote">What for <span class="text-muted">(Optional)</span></label>
+                                <input type="text" id="debtNote" class="form-control" maxlength="200" placeholder="e.g. Lunch, Textbook">
+                            </div>
+                            <div class="form-group-row">
+                                <div class="form-group flex-1">
+                                    <label for="debtPhone">WhatsApp no. <span class="text-muted">(Optional)</span></label>
+                                    <input type="tel" id="debtPhone" class="form-control" maxlength="20" placeholder="0801 234 5678">
+                                </div>
+                                <div class="form-group flex-1">
+                                    <label for="debtDue">Due date <span class="text-muted">(Optional)</span></label>
+                                    <input type="date" id="debtDue" class="form-control">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-full"><i class="fa-solid fa-plus"></i> Save Record</button>
+                        </form>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h2>Active</h2></div>
+                        <div id="debtActiveList"></div>
+                        <details class="debt-history">
+                            <summary>Settled history (<span id="debtSettledCount">0</span>)</summary>
+                            <div id="debtSettledList"></div>
+                        </details>
+                    </div>
+                </div>
+            </section>
+
+            <section id="projections-tab" class="tab-content">
+                <div class="projection-setup-container">
+                    <div class="card banner-card">
+                        <div class="banner-content">
+                            <div class="banner-text">
+                                <h2>Smart Semester Cashflow Planner</h2>
+                                <p>Map your bulk student funding across the term to ensure you never run out of cash before exams.</p>
+                            </div>
+                            <div class="banner-icon">
+                                <i class="fa-solid fa-calendar-check"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="projection-grid-layout">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2>Semester Parameters</h2>
+                            </div>
+                            <form id="projectionForm" class="form">
+                                <div class="form-group">
+                                    <label for="semesterWeeks">Length of Semester (Weeks)</label>
+                                    <input type="number" id="semesterWeeks" class="form-control" value="16" min="1" max="52" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="bulkIncome">Semester Bulk Funding</label>
+                                    <input type="number" id="bulkIncome" class="form-control" placeholder="e.g. 5000" min="0" step="any" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="savingsSafety">Emergency Savings Buffer</label>
+                                    <input type="number" id="savingsSafety" class="form-control" value="500" min="0" step="any">
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-full">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> Calculate Smart Plan
+                                </button>
+                            </form>
+                        </div>
+
+                        <div class="card projection-result-card">
+                            <div class="card-header">
+                                <h2>Weekly Allowance Recommendation</h2>
+                            </div>
+                            <div class="projection-result-body" id="projectionResults">
+                                <div class="empty-projection-state">
+                                    <i class="fa-solid fa-calculator text-muted"></i>
+                                    <p>Enter your semester parameters to calculate your personalized weekly allowance budget.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Financial Intelligence Tab Content -->
+            <section id="intelligence-tab" class="tab-content">
+                <div class="projection-setup-container">
+                    <div class="card banner-card" style="background: linear-gradient(135deg, #4318ff 0%, #05cd99 100%);">
+                        <div class="banner-content">
+                            <div class="banner-text">
+                                <h2><i class="fa-solid fa-brain"></i> Financial Intelligence Layer</h2>
+                                <p>Deep deterministic calculations and AI insights analyzing your transactions, leaks, speedometers, forecasts, simulations, and budgets.</p>
+                            </div>
+                            <div class="banner-icon">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="two-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2><i class="fa-solid fa-user-tag text-primary"></i> Spending Behavior Profile & Streaks</h2>
+                            </div>
+                            <div id="behaviorProfileBox" style="margin-bottom: 16px;">
+                                <h3 id="profileTitleDisplay" style="font-size: 1.1rem; font-weight: 700; margin-bottom: 6px;">Loading profile...</h3>
+                                <p id="profileDescDisplay" class="text-muted" style="font-size: 0.9rem; line-height: 1.5;"></p>
+                            </div>
+                            <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 10px;">Smart Financial Streaks</h4>
+                            <div id="financialStreaksList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h2><i class="fa-solid fa-gauge-high text-warning"></i> Spending Speedometer & Leaks</h2>
+                            </div>
+                            <div id="speedometerBox" style="margin-bottom: 16px; padding: 12px; background: var(--bg-input); border-radius: 12px; border: 1px solid var(--border-color);"></div>
+                            <div id="leaksBox" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                        </div>
+                    </div>
+
+                    <div class="two-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2><i class="fa-solid fa-crystal-ball text-success"></i> Future Balance Prediction</h2>
+                            </div>
+                            <div id="futurePredictionBox" style="display: flex; flex-direction: column; gap: 12px;"></div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h2><i class="fa-solid fa-basket-shopping text-primary"></i> Can I Afford This? Tool</h2>
+                            </div>
+                            <form id="affordForm" class="form">
+                                <div class="form-group">
+                                    <label for="affordAmount">Potential Purchase Amount</label>
+                                    <input type="number" id="affordAmount" class="form-control" placeholder="e.g. 150" min="0.01" step="0.01" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-full">
+                                    <i class="fa-solid fa-calculator"></i> Analyze Affordability
+                                </button>
+                            </form>
+                            <div id="affordResultBox" style="margin-top: 16px;"></div>
+                        </div>
+                    </div>
+
+                    <div class="two-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2><i class="fa-solid fa-sliders text-warning"></i> What-If Money Simulator</h2>
+                            </div>
+                            <div class="form">
+                                <div class="form-group">
+                                    <label for="simulatorType">Simulation Scenario</label>
+                                    <select id="simulatorType" class="form-control">
+                                        <option value="spend_less_pct">Reduce Remaining Spending by %</option>
+                                        <option value="extra_income">Earn Extra Income (Amount)</option>
+                                        <option value="remove_recurring">Remove Recurring Expense (Amount)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="simulatorValue">Scenario Value</label>
+                                    <input type="number" id="simulatorValue" class="form-control" value="20" min="1" step="1" required>
+                                </div>
+                                <button type="button" id="runSimulatorBtn" class="btn btn-primary btn-full">
+                                    <i class="fa-solid fa-bolt"></i> Run Simulation
+                                </button>
+                            </div>
+                            <div id="simulatorResultBox" style="margin-top: 16px;"></div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h2><i class="fa-solid fa-triangle-exclamation text-danger"></i> Goal Collision Detector</h2>
+                            </div>
+                            <div id="goalCollisionsBox" style="display: flex; flex-direction: column; gap: 12px;"></div>
+                        </div>
+                    </div>
+
+                    <div class="two-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2><i class="fa-solid fa-bolt-lightning text-danger"></i> Unusual / Impulse Detector</h2>
+                            </div>
+                            <div id="unusualPurchasesBox" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h2><i class="fa-solid fa-rotate text-primary"></i> Recurring Expense Discovery</h2>
+                            </div>
+                            <div id="recurringExpensesBox" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                        </div>
+                    </div>
+
+                    <div class="two-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2><i class="fa-solid fa-clock-rotate-left text-primary"></i> Financial Time Machine</h2>
+                            </div>
+                            <div id="timeMachineBox" style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto;"></div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h2><i class="fa-solid fa-magnifying-glass-chart text-warning"></i> Why Did I Spend More?</h2>
+                            </div>
+                            <div id="whySpendMoreBox" style="padding: 12px; background: var(--bg-input); border-radius: 12px; border: 1px solid var(--border-color);"></div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fa-solid fa-lightbulb text-success"></i> Smart Budget Suggestions</h2>
+                        </div>
+                        <p class="subtitle" style="margin-bottom: 16px;">Realistic budget limits derived from your historical spending.</p>
+                        <div id="smartBudgetsBox" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;"></div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fa-solid fa-file-waveform text-primary"></i> Monthly Money Autopsy & AI Review</h2>
+                        </div>
+                        <div id="monthlyAutopsyBox" style="display: flex; flex-direction: column; gap: 16px;"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Profile & Settings Tab Content (Dedicated Nav Tab) -->
+            <section id="profile-tab" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-user-gear text-primary"></i> Profile & Account Settings</h2>
+                    </div>
+                    <div class="profile-settings-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                        <!-- Column 1: Profile Info & Avatar -->
+                        <div>
+                            <form id="profileForm" class="form">
+                                <div class="form-group">
+                                    <label>Account ID (Unique)</label>
+                                    <div class="form-control" style="background: var(--border-color); font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                        <span id="profileAccountIdDisplay">EDU-000000</span>
+                                        <i class="fa-solid fa-shield-halved text-primary"></i>
+                                    </div>
+                                    <small class="text-muted">This ID appears on your transaction reports and printouts.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="profileUsername">Username</label>
+                                    <input type="text" id="profileUsername" class="form-control" required>
+                                </div>
+                                <div class="form-group-row">
+                                    <div class="form-group flex-1">
+                                        <label for="profileFirstName">First Name</label>
+                                        <input type="text" id="profileFirstName" class="form-control">
+                                    </div>
+                                    <div class="form-group flex-1">
+                                        <label for="profileLastName">Last Name</label>
+                                        <input type="text" id="profileLastName" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="profileDob">Date of Birth</label>
+                                    <input type="date" id="profileDob" class="form-control">
+                                </div>
+                                 <div class="form-group">
+                                    <label for="profileCurrency">Preferred Currency</label>
+                                    <select id="profileCurrency" class="form-control"></select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Choose Avatar (Select One)</label>
+                                    <div class="avatar-grid" id="avatarGrid">
+                                        <!-- Populated dynamically (8-12 avatars) -->
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary mt-3">
+                                    <i class="fa-solid fa-floppy-disk"></i> Save Profile Settings
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Column 2: Security & Sensitive Actions -->
+                        <div style="display: flex; flex-direction: column; gap: 24px;">
+                            <div class="card" style="background: var(--bg-input); border: 1px solid var(--border-color);">
+                                <h3 style="font-size: 1.05rem; margin-bottom: 14px;"><i class="fa-solid fa-key"></i> Change Password</h3>
+                                <form id="passwordForm" class="form">
+                                    <div class="form-group">
+                                        <label for="oldPassword">Current Password</label>
+                                        <input type="password" id="oldPassword" class="form-control" placeholder="••••••••" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newPassword">New Password</label>
+                                        <input type="password" id="newPassword" class="form-control" placeholder="••••••••" required minlength="6">
+                                    </div>
+                                    <button type="submit" class="btn btn-secondary-outline">
+                                        Update Password
+                                    </button>
+                                </form>
+                            </div>
+
+                            <div class="card" style="background: var(--danger-light); border: 1px solid var(--danger);">
+                                <h3 style="font-size: 1.05rem; margin-bottom: 10px; color: var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i> Reset Account Data</h3>
+                                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">Wipe all transactions, budgets, and savings goals. Requires password verification and confirmation dialog.</p>
+                                <button type="button" class="btn btn-danger-outline btn-full" id="resetDataInsideBtn">
+                                    <i class="fa-solid fa-trash-can"></i> Reset All Financial Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Deposit/Add Funds Modal -->
+    <div class="modal-backdrop" id="addFundsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Add Funds to Goal</h3>
+                <button class="close-modal-btn" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addFundsForm" class="form">
+                    <input type="hidden" id="modalGoalId">
+                    <div class="form-group">
+                        <label for="modalGoalName">Goal Name</label>
+                        <input type="text" id="modalGoalName" class="form-control" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label for="fundAmount">Contribution Amount</label>
+                        <input type="number" id="fundAmount" class="form-control" placeholder="0.00" min="0.01" step="0.01" required>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary-outline" id="cancelModalBtn">Cancel</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fa-solid fa-piggy-bank"></i> Save Contribution
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal-backdrop" id="confirmModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="confirmModalTitle">Are you sure?</h3>
+                <button class="close-modal-btn" id="closeConfirmModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmModalMessage" class="text-muted">This action requires your confirmation.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary-outline" id="confirmCancelBtn">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmOkBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- First-time Setup Wizard (shown once to new users) -->
+    <div class="onb-backdrop" id="onboardingOverlay" role="dialog" aria-modal="true" aria-labelledby="onbTitle" hidden>
+        <div class="onb-card">
+            <div class="onb-top">
+                <span class="onb-step-label" id="onbStepLabel">Step 1 of 6</span>
+                <div class="onb-progress"><div class="onb-progress-bar" id="onbProgressBar"></div></div>
+            </div>
+
+            <div class="onb-body">
+                <!-- Step 1: starting balance (required) -->
+                <section class="onb-step active" data-step="1">
+                    <h2 id="onbTitle">Welcome<span id="onbWelcomeName"></span>! Let's set up your money</h2>
+                    <p class="onb-sub">This takes about a minute and makes every chart and tip in the app work for you.</p>
+                    <label class="onb-label" for="onbBalance">How much money do you have right now?</label>
+                    <div class="onb-money">
+                        <span class="onb-money-sym" data-cur></span>
+                        <input type="number" id="onbBalance" class="form-control" inputmode="decimal" min="0" step="any" placeholder="0.00">
+                    </div>
+                    <p class="onb-hint">Add up cash, bank and mobile money. Enter 0 if you have nothing at the moment.</p>
+                </section>
+
+                <!-- Step 2: income sources (required) -->
+                <section class="onb-step" data-step="2">
+                    <h2>How does money reach you?</h2>
+                    <p class="onb-sub">Pick everything that applies. You can mix them.</p>
+                    <div class="onb-chips" id="onbSourceChips">
+                        <button type="button" class="onb-chip" data-source="allowance" aria-pressed="false">Fixed allowance</button>
+                        <button type="button" class="onb-chip" data-source="bulk" aria-pressed="false">Once a semester</button>
+                        <button type="button" class="onb-chip" data-source="job" aria-pressed="false">Job or side gig</button>
+                        <button type="button" class="onb-chip" data-source="gifts" aria-pressed="false">Gifts and irregular</button>
+                    </div>
+
+                    <div class="onb-panel" id="onbPanel_allowance" hidden>
+                        <label class="onb-label" for="onbAllowanceAmt">Fixed allowance (from family or a guardian)</label>
+                        <div class="onb-row">
+                            <div class="onb-money"><span class="onb-money-sym" data-cur></span><input type="number" id="onbAllowanceAmt" class="form-control" inputmode="decimal" min="0" step="any" placeholder="Amount"></div>
+                            <select id="onbAllowanceFreq" class="form-control onb-freq"><option value="weekly">per week</option><option value="monthly" selected>per month</option></select>
+                        </div>
+                    </div>
+                    <div class="onb-panel" id="onbPanel_bulk" hidden>
+                        <label class="onb-label" for="onbBulkAmt">Total you receive once a semester (loan, scholarship, bursary, school support)</label>
+                        <div class="onb-money"><span class="onb-money-sym" data-cur></span><input type="number" id="onbBulkAmt" class="form-control" inputmode="decimal" min="0" step="any" placeholder="Amount per semester"></div>
+                    </div>
+                    <div class="onb-panel" id="onbPanel_job" hidden>
+                        <label class="onb-label" for="onbJobAmt">Job or side gig earnings</label>
+                        <div class="onb-row">
+                            <div class="onb-money"><span class="onb-money-sym" data-cur></span><input type="number" id="onbJobAmt" class="form-control" inputmode="decimal" min="0" step="any" placeholder="Typical amount"></div>
+                            <select id="onbJobFreq" class="form-control onb-freq"><option value="weekly">per week</option><option value="monthly" selected>per month</option></select>
+                        </div>
+                    </div>
+                    <div class="onb-panel" id="onbPanel_gifts" hidden>
+                        <label class="onb-label" for="onbGiftsAmt">Gifts and other irregular money. About how much in a normal month? (optional)</label>
+                        <div class="onb-money"><span class="onb-money-sym" data-cur></span><input type="number" id="onbGiftsAmt" class="form-control" inputmode="decimal" min="0" step="any" placeholder="Rough amount per month"></div>
+                        <p class="onb-hint">Gifts are not counted as guaranteed money in your semester plan. They are treated as a bonus when you log them.</p>
+                    </div>
+                </section>
+
+                <!-- Step 3: semester length (skippable) -->
+                <section class="onb-step" data-step="3">
+                    <h2>How long is your semester?</h2>
+                    <p class="onb-sub">Used to turn your money into a weekly spending amount.</p>
+                    <div class="onb-chips" id="onbWeekChips">
+                        <button type="button" class="onb-chip" data-weeks="12" aria-pressed="false">12 weeks</button>
+                        <button type="button" class="onb-chip" data-weeks="14" aria-pressed="false">14 weeks</button>
+                        <button type="button" class="onb-chip selected" data-weeks="16" aria-pressed="true">16 weeks</button>
+                        <button type="button" class="onb-chip" data-weeks="20" aria-pressed="false">20 weeks</button>
+                    </div>
+                    <label class="onb-label" for="onbWeeks">Or type your own (weeks)</label>
+                    <input type="number" id="onbWeeks" class="form-control" inputmode="numeric" min="1" max="52" step="1" value="16">
+                </section>
+
+                <!-- Step 4: biggest expenses -> budgets (skippable) -->
+                <section class="onb-step" data-step="4">
+                    <h2>What do you spend the most on?</h2>
+                    <p class="onb-sub">Tap your main expenses. We suggest a monthly limit from your income, and you can change any number.</p>
+                    <div class="onb-chips" id="onbBudgetChips"></div>
+                    <div id="onbBudgetRows"></div>
+                </section>
+
+                <!-- Step 5: savings goal (skippable) -->
+                <section class="onb-step" data-step="5">
+                    <h2>Saving for something?</h2>
+                    <p class="onb-sub">A laptop, a trip, an emergency fund. Leave it empty if not now.</p>
+                    <label class="onb-label" for="onbGoalName">Goal name</label>
+                    <input type="text" id="onbGoalName" class="form-control" maxlength="60" placeholder="e.g. New laptop">
+                    <label class="onb-label" for="onbGoalTarget">Target amount</label>
+                    <div class="onb-money"><span class="onb-money-sym" data-cur></span><input type="number" id="onbGoalTarget" class="form-control" inputmode="decimal" min="0" step="any" placeholder="0.00"></div>
+                    <label class="onb-label" for="onbGoalSaved">Already saved (optional)</label>
+                    <div class="onb-money"><span class="onb-money-sym" data-cur></span><input type="number" id="onbGoalSaved" class="form-control" inputmode="decimal" min="0" step="any" placeholder="0.00"></div>
+                    <label class="onb-label" for="onbGoalDate">Target date (optional)</label>
+                    <input type="date" id="onbGoalDate" class="form-control">
+                </section>
+
+                <!-- Step 6: safety buffer (skippable) -->
+                <section class="onb-step" data-step="6">
+                    <h2>Set your safety buffer</h2>
+                    <p class="onb-sub">The minimum you never want to drop below, for emergencies. We suggest about 10% of your monthly money.</p>
+                    <label class="onb-label" for="onbSafety">Safety buffer</label>
+                    <div class="onb-money"><span class="onb-money-sym" data-cur></span><input type="number" id="onbSafety" class="form-control" inputmode="decimal" min="0" step="any" placeholder="0.00"></div>
+                    <div class="onb-preview" id="onbPreview" aria-live="polite"></div>
+                </section>
+            </div>
+
+            <p class="onb-error" id="onbError" role="alert"></p>
+
+            <div class="onb-footer">
+                <button type="button" class="btn btn-secondary-outline" id="onbBack">Back</button>
+                <span class="onb-spacer"></span>
+                <button type="button" class="btn btn-secondary-outline" id="onbSkip">Skip</button>
+                <button type="button" class="btn btn-primary" id="onbNext">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastNotification" class="toast">
+        <span class="toast-icon" id="toastIcon"><i class="fa-solid fa-circle-info"></i></span>
+        <span class="toast-message" id="toastMessage">Message here...</span>
+    </div>
+
+    <!-- Custom Script File -->
+    <script src="currency.js"></script>
+    <script src="geminiapi.js"></script>
+    <script src="intelligence.js"></script>
+    <script src="onboarding.js"></script>
+    <!-- Mobile bottom navigation -->
+    <nav class="bottom-nav" id="bottomNav" aria-label="Main navigation">
+        <button type="button" class="bn-item active" data-go="dashboard"><i class="fa-solid fa-house"></i><span>Home</span></button>
+        <button type="button" class="bn-item" data-go="transactions"><i class="fa-solid fa-list-check"></i><span>Transactions</span></button>
+        <button type="button" class="bn-item" data-go="budgets"><i class="fa-solid fa-wallet"></i><span>Budgets</span></button>
+        <button type="button" class="bn-item" data-go="intelligence"><i class="fa-solid fa-brain"></i><span>Insights</span></button>
+        <button type="button" class="bn-item" id="bnMore" data-more="1"><i class="fa-solid fa-ellipsis"></i><span>More</span></button>
+    </nav>
+    <button type="button" class="fab-add" id="fabAdd" aria-label="Add transaction"><i class="fa-solid fa-plus"></i></button>
+
+    <!-- Quick add bottom sheet (the Quick Add card is moved in here on mobile) -->
+    <div class="sheet-backdrop" id="sheetBackdrop"></div>
+    <div class="bottom-sheet" id="quickAddSheet" role="dialog" aria-label="Add transaction">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title-row"><h3>Add Transaction</h3><button type="button" class="sheet-close" data-close-sheet aria-label="Close"><i class="fa-solid fa-xmark"></i></button></div>
+        <div class="sheet-body" id="quickAddSheetBody"></div>
+    </div>
+
+    <!-- More bottom sheet -->
+    <div class="bottom-sheet" id="moreSheet" role="dialog" aria-label="More">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title-row"><h3>More</h3><button type="button" class="sheet-close" data-close-sheet aria-label="Close"><i class="fa-solid fa-xmark"></i></button></div>
+        <div class="sheet-body">
+            <div class="more-grid">
+                <button type="button" class="more-item" data-go="savings"><i class="fa-solid fa-piggy-bank"></i><span>Savings Goals</span></button>
+                <button type="button" class="more-item" data-go="debts"><i class="fa-solid fa-handshake"></i><span>Owe / Owed</span></button>
+                <button type="button" class="more-item" data-go="projections"><i class="fa-solid fa-hourglass-half"></i><span>Semester Planner</span></button>
+                <button type="button" class="more-item" data-go="profile"><i class="fa-solid fa-user-gear"></i><span>Profile &amp; Settings</span></button>
+                <button type="button" class="more-item" id="moreTheme"><i class="fa-solid fa-moon"></i><span>Dark / Light</span></button>
+                <button type="button" class="more-item" id="moreDemo"><i class="fa-solid fa-database"></i><span>Load Demo Data</span></button>
+                <button type="button" class="more-item danger" id="moreLogout"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="mobile-nav.js"></script>
+    <script src="debts.js"></script>
+    <script src="badges.js"></script>
+    <script src="security-lock.js"></script>
+</body>
+</html>
