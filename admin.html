@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>EduFinance Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="admin.css">
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script>
+        // Apply saved theme before paint (same key the main app uses)
+        try { if (localStorage.getItem('edu_theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark'); } catch (e) {}
+    </script>
+</head>
+<body>
+
+<!-- ============ Loading ============ -->
+<section class="screen" id="loadingView">
+    <div style="text-align:center">
+        <div class="spinner"></div>
+        <p class="muted" style="margin-top:16px;font-size:.9rem">Checking access...</p>
+    </div>
+</section>
+
+<!-- ============ Login ============ -->
+<section class="screen hidden" id="authView">
+    <div class="auth-card">
+        <div class="logo"><i class="fa-solid fa-graduation-cap"></i><span>EduFinance</span><span class="admin-pill">Admin</span></div>
+        <h1>Admin sign in</h1>
+        <p class="sub">Restricted area. Only approved administrators can continue.</p>
+
+        <div class="form-error hidden" id="loginError" role="alert"></div>
+
+        <form id="loginForm" novalidate>
+            <div class="field">
+                <label for="adminEmail">Email</label>
+                <input class="input" type="email" id="adminEmail" autocomplete="username" placeholder="admin@example.com" required>
+            </div>
+            <div class="field">
+                <label for="adminPassword">Password</label>
+                <div class="input-wrap">
+                    <input class="input" type="password" id="adminPassword" autocomplete="current-password" placeholder="Your password" required>
+                    <button type="button" class="eye-btn" id="togglePw" aria-label="Show password"><i class="fa-regular fa-eye"></i></button>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full" id="loginBtn">Sign in</button>
+        </form>
+
+        <div class="divider">or</div>
+        <button type="button" class="btn btn-outline btn-full" id="googleBtn"><i class="fa-brands fa-google"></i> Continue with Google</button>
+        <button type="button" class="link-btn" id="forgotBtn">Forgot password?</button>
+    </div>
+</section>
+
+<!-- ============ Access denied ============ -->
+<section class="screen hidden" id="deniedView">
+    <div class="auth-card">
+        <div class="logo"><i class="fa-solid fa-graduation-cap"></i><span>EduFinance</span><span class="admin-pill">Admin</span></div>
+        <h1>Access not granted</h1>
+        <p class="sub" id="deniedMsg">You are signed in as <strong id="deniedEmail"></strong>, but this account is not an administrator.</p>
+        <div class="form-error hidden" id="deniedErr"></div>
+        <p class="muted" style="font-size:.85rem;margin-bottom:6px">Your account ID (UID):</p>
+        <div class="uid-box"><span id="deniedUid"></span><button class="btn btn-outline btn-small" id="copyUid" type="button"><i class="fa-regular fa-copy"></i></button></div>
+        <p class="muted" style="font-size:.85rem;line-height:1.5;margin-bottom:18px">If this should be your admin account, add a document with this UID to the <code>admins</code> collection in Firestore, then refresh.</p>
+        <button class="btn btn-primary btn-full" id="deniedRetry" type="button" style="margin-bottom:10px"><i class="fa-solid fa-rotate"></i> Check again</button>
+        <button class="btn btn-outline btn-full" id="deniedSignOut" type="button"><i class="fa-solid fa-right-from-bracket"></i> Sign out</button>
+    </div>
+</section>
+
+<!-- ============ Admin app ============ -->
+<div class="shell hidden" id="appView">
+    <div class="scrim" id="scrim"></div>
+
+    <aside class="sidebar" id="sidebar" aria-label="Admin navigation">
+        <div class="sidebar-header">
+            <div class="logo"><i class="fa-solid fa-graduation-cap"></i><span>EduFinance</span></div>
+            <span class="admin-pill" style="margin:0">Admin</span>
+        </div>
+        <nav class="sidebar-menu">
+            <button class="menu-item active" data-view="overview"><i class="fa-solid fa-chart-pie"></i><span>Overview</span></button>
+            <button class="menu-item" data-view="users"><i class="fa-solid fa-users"></i><span>Users</span></button>
+            <button class="menu-item" data-view="transactions"><i class="fa-solid fa-list-check"></i><span>Transactions</span></button>
+            <button class="menu-item" data-view="analytics"><i class="fa-solid fa-chart-line"></i><span>Analytics</span></button>
+            <button class="menu-item" data-view="admins"><i class="fa-solid fa-user-shield"></i><span>Admins</span></button>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="avatar" id="meAvatar">A</div>
+            <div class="who"><strong id="meName">Admin</strong><small>Administrator</small></div>
+            <button class="icon-btn" id="signOutBtn" title="Sign out" aria-label="Sign out"><i class="fa-solid fa-right-from-bracket"></i></button>
+        </div>
+    </aside>
+
+    <div class="main">
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="icon-btn menu-toggle" id="menuBtn" aria-label="Open menu"><i class="fa-solid fa-bars"></i></button>
+                <h1 id="pageTitle">Overview</h1>
+            </div>
+            <div class="topbar-right">
+                <span class="updated" id="lastUpdated"></span>
+                <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme"><i class="fa-solid fa-moon"></i></button>
+                <button class="btn btn-primary btn-small" id="refreshBtn"><i class="fa-solid fa-rotate"></i><span class="hide-sm"> Refresh</span></button>
+            </div>
+        </header>
+
+        <main class="content">
+            <div class="banner error hidden" id="loadError" role="alert"><i class="fa-solid fa-circle-exclamation"></i><div id="loadErrorText"></div></div>
+            <div class="banner warn hidden" id="capWarn"><i class="fa-solid fa-triangle-exclamation"></i><div id="capWarnText"></div></div>
+
+            <!-- ===== Overview ===== -->
+            <section id="view-overview">
+                <div class="stats-grid" id="statsGrid"></div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header"><h2>Activity</h2><small>Transactions logged per day, last 30 days</small></div>
+                        <div class="chart-box"><canvas id="chActivity"></canvas><div class="chart-empty hidden"></div></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h2>Top spending categories</h2><small>by number of transactions</small></div>
+                        <div class="chart-box"><canvas id="chCategories"></canvas><div class="chart-empty hidden"></div></div>
+                    </div>
+                </div>
+
+                <div class="grid-eq">
+                    <div class="card">
+                        <div class="card-header"><h2>Users by currency</h2></div>
+                        <div class="bar-list" id="currencyBars"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h2>Money tracked</h2><small>shown per currency, never mixed</small></div>
+                        <div class="table-wrap">
+                            <table style="min-width:0">
+                                <thead><tr><th>Currency</th><th class="num">Income</th><th class="num">Expenses</th></tr></thead>
+                                <tbody id="moneyBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== Users ===== -->
+            <section id="view-users" class="hidden">
+                <div class="card">
+                    <div class="toolbar">
+                        <div class="search"><i class="fa-solid fa-magnifying-glass"></i><input class="input" id="userSearch" type="search" placeholder="Search name, username, email or account ID" aria-label="Search users"></div>
+                        <select class="select" id="userCurrency" aria-label="Filter by currency"><option value="">All currencies</option></select>
+                        <select class="select" id="userSort" aria-label="Sort users">
+                            <option value="joined">Newest first</option>
+                            <option value="activity">Recent activity</option>
+                            <option value="tx">Most transactions</option>
+                            <option value="name">Name A-Z</option>
+                        </select>
+                        <button class="btn btn-outline" id="exportUsers"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>User</th><th>Email</th><th>Account ID</th><th>Currency</th><th class="num">Transactions</th><th>Last activity</th><th>Joined</th></tr></thead>
+                            <tbody id="usersBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pager" id="usersPager"></div>
+                </div>
+            </section>
+
+            <!-- ===== Transactions ===== -->
+            <section id="view-transactions" class="hidden">
+                <div class="card">
+                    <div class="toolbar">
+                        <div class="search"><i class="fa-solid fa-magnifying-glass"></i><input class="input" id="txSearch" type="search" placeholder="Search description, category or user" aria-label="Search transactions"></div>
+                        <select class="select" id="txType" aria-label="Filter by type">
+                            <option value="">All types</option>
+                            <option value="income">Income</option>
+                            <option value="expense">Expense</option>
+                        </select>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Date</th><th>User</th><th>Description</th><th>Category</th><th>Type</th><th class="num">Amount</th></tr></thead>
+                            <tbody id="txBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pager" id="txPager"></div>
+                </div>
+            </section>
+
+            <!-- ===== Analytics ===== -->
+            <section id="view-analytics" class="hidden">
+                <div class="stats-grid" id="anKpis"></div>
+                <div class="grid-eq">
+                    <div class="card">
+                        <div class="card-header"><h2>New users per month</h2><small>from sign-up date</small></div>
+                        <div class="chart-box"><canvas id="anSignups"></canvas><div class="chart-empty hidden"></div></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h2>Age groups</h2><small>from date of birth</small></div>
+                        <div class="chart-box"><canvas id="anAges"></canvas><div class="chart-empty hidden"></div></div>
+                    </div>
+                </div>
+                <div class="grid-eq">
+                    <div class="card">
+                        <div class="card-header"><h2>Income vs expense entries</h2><small>last 6 months, by count</small></div>
+                        <div class="chart-box"><canvas id="anMonthly"></canvas><div class="chart-empty hidden"></div></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h2>Income sources</h2><small>chosen during onboarding</small></div>
+                        <div class="bar-list" id="incomeSources"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== Admins ===== -->
+            <section id="view-admins" class="hidden">
+                <div class="card" style="margin-bottom:20px">
+                    <div class="card-header"><h2>Administrators</h2><small>read-only list</small></div>
+                    <div class="table-wrap">
+                        <table style="min-width:520px">
+                            <thead><tr><th>Admin</th><th>UID</th></tr></thead>
+                            <tbody id="adminsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><h2>Add or remove an admin</h2></div>
+                    <ol class="steps">
+                        <li>The person signs in once at <code>login.html</code> so their account exists.</li>
+                        <li>Copy their UID from <strong>Firebase Console &gt; Authentication &gt; Users</strong>.</li>
+                        <li>Open <strong>Firestore &gt; admins</strong> and add a document using that UID as the <strong>Document ID</strong>, with a field <code>email</code> (string).</li>
+                        <li>To remove an admin, delete that document.</li>
+                    </ol>
+                    <p class="muted" style="font-size:.84rem;margin-top:14px;line-height:1.5">Admin rights can only be changed from the Firebase Console. Nobody can grant themselves admin access from the app.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<!-- ============ User detail modal ============ -->
+<div class="modal-backdrop" id="userModal" role="dialog" aria-modal="true" aria-labelledby="umTitle">
+    <div class="modal" id="userModalBody"></div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><i class="fa-solid fa-circle-info"></i><span id="toastMsg"></span></div>
+
+<style>.hide-sm{display:inline}@media(max-width:520px){.hide-sm{display:none}}</style>
+<script src="admin.js"></script>
+</body>
+</html>
