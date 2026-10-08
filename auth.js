@@ -262,6 +262,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         dob,
                         accountId,
                         currency,
+                        email,
+                        createdAt: new Date().toISOString(),
                         avatar: 'fa-user-graduate'
                     });
                 }
@@ -345,6 +347,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     dob,
                     accountId,
                     currency,
+                    email: pendingGoogleUser.email || '',
+                    createdAt: new Date().toISOString(),
                     avatar: 'fa-user-graduate'
                 });
 

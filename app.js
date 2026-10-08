@@ -264,6 +264,18 @@ document.addEventListener('DOMContentLoaded', () => {
         unsubProfile = profileDocRef.onSnapshot(docSnap => {
             if (docSnap.exists) {
                 state.profile = { ...state.profile, ...docSnap.data() };
+                // One-time backfill so the admin dashboard can show email + join date for older accounts
+                const pd = docSnap.data();
+                if (currentUser && !window._profileBackfilled && (!pd.email || !pd.createdAt)) {
+                    window._profileBackfilled = true;
+                    const fill = {};
+                    if (!pd.email && currentUser.email) fill.email = currentUser.email;
+                    if (!pd.createdAt && currentUser.metadata && currentUser.metadata.creationTime) {
+                        const ct = new Date(currentUser.metadata.creationTime);
+                        if (!isNaN(ct)) fill.createdAt = ct.toISOString();
+                    }
+                    if (Object.keys(fill).length) profileDocRef.set(fill, { merge: true }).catch(() => {});
+                }
             } else {
                 if (currentUser && currentUser.displayName) {
                     state.profile.username = currentUser.displayName;
