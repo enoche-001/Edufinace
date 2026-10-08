@@ -4,132 +4,1055 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EduFinance - Smart Student Finance & Budget Tracker</title>
-    <!-- Google Fonts: Inter -->
+    <!-- Google Fonts: Plus Jakarta Sans & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Custom Style Sheet -->
+    <!-- Custom Styles -->
     <link rel="stylesheet" href="style.css">
+    <style>
+        :root {
+            --bg-body: #F8FAFC;
+            --bg-white: #FFFFFF;
+            --text-dark: #0F172A;
+            --text-muted: #64748B;
+            --primary: #2563EB;
+            --primary-hover: #1D4ED8;
+            --emerald: #059669;
+            --border-color: #E2E8F0;
+            --box-shadow: 0 18px 40px rgba(112, 144, 176, 0.12);
+            --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-dark);
+            font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Fixed Sticky Translucent Glass Header */
+        .landing-header-glass {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 76px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding: 0 5%;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            background: rgba(15, 23, 42, 0.85);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+            transition: var(--transition);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #FFFFFF;
+            text-decoration: none;
+            flex-shrink: 0;
+        }
+
+        .logo-icon {
+            font-size: 1.6rem;
+            color: var(--primary);
+        }
+
+        .nav-links-desktop {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .nav-links-desktop a {
+            color: #CBD5E1;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.2s ease;
+        }
+
+        .nav-links-desktop a:hover {
+            color: #FFFFFF;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        /* Hamburger Menu Button */
+        .hamburger-btn {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            position: relative;
+            z-index: 1010;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hamburger-lines {
+            width: 24px;
+            height: 18px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .hamburger-lines span {
+            display: block;
+            height: 2px;
+            width: 100%;
+            background: #FFFFFF;
+            border-radius: 2px;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .hamburger-btn.active .hamburger-lines span:nth-child(1) {
+            transform: translateY(8px) rotate(45deg);
+        }
+        .hamburger-btn.active .hamburger-lines span:nth-child(2) {
+            opacity: 0;
+        }
+        .hamburger-btn.active .hamburger-lines span:nth-child(3) {
+            transform: translateY(-8px) rotate(-45deg);
+        }
+
+        /* Mobile Sliding Glass Drawer */
+        .mobile-drawer {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 100%;
+            max-width: 320px;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.96);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(255, 255, 255, 0.15);
+            z-index: 1005;
+            display: flex;
+            flex-direction: column;
+            padding: 100px 30px 40px;
+            gap: 24px;
+            transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: -10px 0 40px rgba(0,0,0,0.5);
+        }
+
+        .mobile-drawer.open {
+            right: 0;
+        }
+
+        .mobile-drawer a {
+            color: #FFFFFF;
+            text-decoration: none;
+            font-size: 1.15rem;
+            font-weight: 600;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: color 0.2s;
+        }
+
+        .mobile-drawer a:hover {
+            color: var(--primary);
+        }
+
+        .mobile-drawer-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: auto;
+        }
+
+        /* Hero Section with Background Image & High Contrast Text */
+        .hero-section-image {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(rgba(15, 23, 42, 0.82), rgba(15, 23, 42, 0.92)), 
+                        url('https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=1920&auto=format&fit=crop') no-repeat center center/cover;
+            padding: 140px 5% 80px;
+            color: #FFFFFF;
+        }
+
+        .hero-container {
+            max-width: 1300px;
+            margin: 0 auto;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            align-items: center;
+            gap: 50px;
+            z-index: 2;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #FFFFFF;
+            margin-bottom: 20px;
+        }
+
+        /* Visible Text Entrance Animations (Staggered Fade-In-Up) */
+        @keyframes fadeInUpStagger {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in-up {
+            opacity: 0;
+            animation: fadeInUpStagger 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.25s; }
+        .delay-3 { animation-delay: 0.4s; }
+
+        .hero-title {
+            font-size: 3.2rem;
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+            margin-bottom: 20px;
+            color: #FFFFFF;
+            text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7);
+        }
+
+        .hero-desc {
+            font-size: 1.1rem;
+            color: #E2E8F0;
+            line-height: 1.7;
+            margin-bottom: 30px;
+            max-width: 600px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+        }
+
+        .hero-cta-group {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        /* Hero Glass Card ("Semester Cashflow Forecast") */
+        .hero-glass-card {
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.08);
+            transform: rotate(1deg);
+            transition: transform 0.4s ease;
+        }
+
+        .hero-glass-card:hover {
+            transform: rotate(0deg) scale(1.02);
+        }
+
+        /* Modern Buttons */
+        .btn-modern {
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: var(--transition);
+            text-decoration: none;
+        }
+
+        .btn-modern-primary {
+            background: var(--primary);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+        }
+
+        .btn-modern-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+        }
+
+        .btn-modern-outline {
+            background: rgba(255, 255, 255, 0.08);
+            color: #FFFFFF;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(8px);
+        }
+
+        .btn-modern-outline:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .btn-light-outline {
+            background: rgba(255, 255, 255, 0.08);
+            color: #FFFFFF;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-light-outline:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        /* Light-Mode Main Body Sections (Clean & Uncluttered) */
+        .section-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 100px 5%;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+            color: var(--text-dark);
+        }
+
+        .section-subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            margin-bottom: 60px;
+        }
+
+        /* Clean White Cards */
+        .clean-card {
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: var(--box-shadow);
+            transition: var(--transition);
+        }
+
+        .clean-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+            box-shadow: 0 24px 50px rgba(112, 144, 176, 0.18);
+        }
+
+        /* Feature Grid */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+        }
+
+        .feature-icon-box {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: rgba(37, 99, 235, 0.1);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+
+        .feature-icon-box.emerald {
+            background: rgba(5, 150, 105, 0.1);
+            border-color: rgba(5, 150, 105, 0.2);
+            color: var(--emerald);
+        }
+
+        /* FAQ Accordions */
+        .faq-list {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .faq-item {
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--box-shadow);
+            transition: border-color 0.3s;
+        }
+
+        .faq-item:hover {
+            border-color: var(--primary);
+        }
+
+        .faq-question {
+            width: 100%;
+            background: none;
+            border: none;
+            padding: 22px 24px;
+            text-align: left;
+            color: var(--text-dark);
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .faq-question i {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: var(--text-muted);
+        }
+
+        .faq-item.active .faq-question i {
+            transform: rotate(180deg);
+            color: var(--primary);
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding 0.4s ease;
+            padding: 0 24px;
+            color: var(--text-muted);
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        .faq-item.active .faq-answer {
+            max-height: 200px;
+            padding: 0 24px 24px 24px;
+        }
+
+        /* Visible Contact Section & CTA (Embedded Directly on Page) */
+        .contact-cta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 40px;
+            align-items: stretch;
+        }
+
+        .contact-info-box {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 30px;
+        }
+
+        .support-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .support-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 1rem;
+            color: var(--text-muted);
+        }
+
+        .support-item i {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: var(--bg-body);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+        }
+
+        .form-floating-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .form-floating-control {
+            width: 100%;
+            background: var(--bg-body);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 20px;
+            color: var(--text-dark);
+            font-size: 1rem;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .form-floating-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+            background: var(--bg-white);
+        }
+
+        .form-floating-control::placeholder {
+            color: #94A3B8;
+        }
+
+        /* Scroll-Triggered Reveal Animation */
+        .reveal-on-scroll {
+            opacity: 0;
+            transform: translateY(16px);
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .reveal-on-scroll.revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Contrast Dark Footer */
+        .footer-contrast {
+            background: #0F172A;
+            color: #F8FAFC;
+            padding: 80px 5% 40px;
+            border-top: 1px solid #1E293B;
+        }
+
+        .footer-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr 1.5fr;
+            gap: 40px;
+            margin-bottom: 60px;
+        }
+
+        .footer-col h4 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #FFFFFF;
+        }
+
+        .footer-col ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 0;
+            margin: 0;
+        }
+
+        .footer-col ul a {
+            color: #94A3B8;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+
+        .footer-col ul a:hover {
+            color: #FFFFFF;
+        }
+
+        .newsletter-form {
+            display: flex;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .newsletter-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 10px 14px;
+            border-radius: 8px;
+            color: #FFFFFF;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .newsletter-input:focus {
+            border-color: var(--primary);
+        }
+
+        .footer-bottom {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding-top: 30px;
+            border-top: 1px solid #1E293B;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #94A3B8;
+            font-size: 0.85rem;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero-container {
+                grid-template-columns: 1fr;
+                text-align: center;
+                padding-top: 120px;
+            }
+            .hero-content {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            .hero-cta-group {
+                justify-content: center;
+            }
+            .contact-cta-grid {
+                grid-template-columns: 1fr;
+            }
+            .footer-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .landing-header-glass {
+                padding: 12px 16px;
+                flex-wrap: nowrap;
+            }
+            .nav-links-desktop,
+            .desktop-login-btn {
+                display: none !important;
+            }
+            .hamburger-btn {
+                display: flex !important;
+            }
+            .hero-title {
+                font-size: 2.3rem;
+            }
+            .footer-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="landing-auth-wrapper">
-        <!-- Landing Header -->
-        <header class="landing-header">
-            <div class="logo">
-                <i class="fa-solid fa-graduation-cap logo-icon"></i>
-                <span>EduFinance</span>
-            </div>
-            <nav style="display: flex; gap: 24px; align-items: center;" class="landing-nav-links">
-                <a href="#features" class="text-muted" style="text-decoration: none; font-weight: 500;">Features</a>
-                <a href="#aim" class="text-muted" style="text-decoration: none; font-weight: 500;">Aim & Purpose</a>
-                <a href="#faq" class="text-muted" style="text-decoration: none; font-weight: 500;">FAQ</a>
-                <a href="contact.html" class="text-muted" style="text-decoration: none; font-weight: 500;">Contact</a>
-            </nav>
-            <div class="landing-nav-actions">
-                <a href="login.html" class="btn btn-secondary-outline btn-small">Login</a>
-                <a href="login.html" class="btn btn-primary btn-small">Get Started</a>
-            </div>
-        </header>
 
-        <!-- Hero Section -->
-        <section class="hero-section">
+    <!-- Fixed Sticky Translucent Glass Header -->
+    <header class="landing-header-glass">
+        <a href="index.html" class="logo">
+            <i class="fa-solid fa-graduation-cap logo-icon"></i>
+            <span>EduFinance</span>
+        </a>
+        
+        <nav class="nav-links-desktop">
+            <a href="#features">Features</a>
+            <a href="#aim">Aim & Purpose</a>
+            <a href="#faq">FAQ</a>
+            <a href="#contact">Contact</a>
+        </nav>
+
+        <div class="nav-actions">
+            <a href="login.html" class="btn-modern btn-light-outline desktop-login-btn" style="padding: 10px 20px; font-size: 0.9rem;">Login</a>
+            <a href="login.html" class="btn-modern btn-modern-primary" style="padding: 10px 20px; font-size: 0.9rem;">Get Started</a>
+            
+            <button class="hamburger-btn" id="hamburgerBtn" aria-label="Toggle navigation menu">
+                <div class="hamburger-lines">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Sliding Glass Drawer -->
+    <div class="mobile-drawer" id="mobileDrawer">
+        <a href="#features" class="mobile-nav-link">Features</a>
+        <a href="#aim" class="mobile-nav-link">Aim & Purpose</a>
+        <a href="#faq" class="mobile-nav-link">FAQ</a>
+        <a href="#contact" class="mobile-nav-link">Contact</a>
+        
+        <div class="mobile-drawer-actions">
+            <a href="login.html" class="btn-modern btn-light-outline" style="width: 100%; text-align: center;">Login</a>
+            <a href="login.html" class="btn-modern btn-modern-primary" style="width: 100%; text-align: center;">Get Started</a>
+        </div>
+    </div>
+
+    <!-- Hero Section with Background Image & High Contrast Text -->
+    <section class="hero-section-image">
+        <div class="hero-container">
             <div class="hero-content">
-                <span class="badge badge-income mb-3"><i class="fa-solid fa-bolt"></i> Smart Student Finance Tracker</span>
-                <h1>Master Your Student Budget & Loans with Ease</h1>
-                <p>Track your tuition, dorm rent, textbook purchases, part-time income, and semester cashflow in one beautiful, mobile-friendly app powered by cloud sync.</p>
-                <div class="hero-buttons">
-                    <a href="login.html" class="btn btn-primary btn-large">
+                <span class="hero-badge animate-fade-in-up delay-1">
+                    <i class="fa-solid fa-bolt"></i> Smart Student Finance Tracker
+                </span>
+                <h1 class="hero-title animate-fade-in-up delay-2">Master Your Student Budget & Loans with Ease</h1>
+                <p class="hero-desc animate-fade-in-up delay-3">
+                    Track your tuition, dorm rent, textbook purchases, part-time income, and semester cashflow in one beautiful, mobile-friendly app powered by secure cloud sync.
+                </p>
+                <div class="hero-cta-group animate-fade-in-up delay-3">
+                    <a href="login.html" class="btn-modern btn-modern-primary">
                         <i class="fa-solid fa-rocket"></i> Start Tracking Free
                     </a>
-                    <a href="dashboard.html" class="btn btn-secondary-outline btn-large">
+                    <a href="dashboard.html" class="btn-modern btn-modern-outline">
                         <i class="fa-solid fa-database"></i> Explore Demo
                     </a>
                 </div>
             </div>
-            <div class="hero-card-preview">
-                <div class="card preview-card-glow">
-                    <div class="stat-header">
-                        <span class="stat-label">Semester Cashflow Forecast</span>
-                        <i class="fa-solid fa-wallet text-primary"></i>
+            
+            <div class="hero-glass-card animate-fade-in-up delay-3">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                    <span style="font-size: 0.95rem; font-weight: 600; color: #FFFFFF;">Semester Cashflow Forecast</span>
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(5, 150, 105, 0.3); display: flex; align-items: center; justify-content: center; color: #34D399;">
+                        <i class="fa-solid fa-wallet"></i>
                     </div>
-                    <div class="stat-value text-success">$2,450.00</div>
-                    <p class="text-muted" style="font-size: 0.85rem; margin-top: 8px;">Safe weekly allowance calculated for 16 weeks.</p>
+                </div>
+                <div style="font-size: 2.8rem; font-weight: 800; color: #34D399; margin-bottom: 8px; text-shadow: 0 2px 8px rgba(0,0,0,0.4);">$2,450.00</div>
+                <p style="font-size: 0.9rem; color: #CBD5E1; line-height: 1.5;">Safe weekly allowance calculated dynamically across 16 active academic weeks.</p>
+                <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.2); display: flex; justify-content: space-between; font-size: 0.85rem; color: #FFFFFF;">
+                    <span style="color: #CBD5E1;">Tuition: Paid</span>
+                    <span style="color: #34D399; font-weight: 600;"><i class="fa-solid fa-circle-check"></i> On Track</span>
                 </div>
             </div>
-        </section>
+        </div>
+    </section>
 
-        <!-- Aim / Purpose Section -->
-        <section id="aim" style="padding: 60px 40px; background: var(--bg-card); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
-            <div style="max-width: 1000px; margin: 0 auto; text-align: center;">
-                <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 16px;">Our Aim & Purpose</h2>
-                <p style="font-size: 1.05rem; color: var(--text-muted); line-height: 1.7;">
-                    College and university students face unique financial pressures—bulk funding from student loans or grants, fluctuating semester expenses, and unpredictable living costs. EduFinance is built to empower students with intelligent cashflow forecasting, robust budgeting tools, and secure cloud tracking so you can focus on your education without financial anxiety.
+    <!-- Aim & Purpose Section -->
+    <section id="aim" class="section-container reveal-on-scroll">
+        <div class="clean-card" style="max-width: 900px; margin: 0 auto; text-align: center; padding: 50px 40px;">
+            <div class="feature-icon-box" style="margin: 0 auto 20px;">
+                <i class="fa-solid fa-bullseye"></i>
+            </div>
+            <h2 class="section-title" style="font-size: 2.2rem; margin-bottom: 20px;">Our Aim & Purpose</h2>
+            <p style="font-size: 1.1rem; color: var(--text-muted); line-height: 1.8;">
+                College and university students face unique financial pressures—bulk funding from student loans or grants, fluctuating semester expenses, and unpredictable living costs. EduFinance is built to empower students with intelligent cashflow forecasting, robust budgeting tools, and secure cloud tracking so you can focus on your education without financial anxiety.
+            </p>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="section-container">
+        <div class="reveal-on-scroll" style="text-align: center; margin-bottom: 50px;">
+            <h2 class="section-title">Designed for Modern Students</h2>
+            <p class="section-subtitle">Everything you need to stay on top of student finances without complexity.</p>
+        </div>
+        
+        <div class="feature-grid">
+            <div class="clean-card reveal-on-scroll">
+                <div class="feature-icon-box">
+                    <i class="fa-solid fa-scale-balanced"></i>
+                </div>
+                <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 12px; color: var(--text-dark);">Semester Cashflow Planner</h3>
+                <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.6;">
+                    Map your bulk student funding across the entire term to calculate safe weekly allowances and avoid running out of funds before finals.
                 </p>
             </div>
-        </section>
 
-        <!-- Features Section -->
-        <section id="features" style="padding: 80px 40px; max-width: 1200px; margin: 0 auto;">
-            <div style="text-align: center; margin-bottom: 50px;">
-                <h2 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 12px;">Designed for Modern Students</h2>
-                <p style="color: var(--text-muted); font-size: 1.05rem;">Everything you need to stay on top of student finances.</p>
+            <div class="clean-card reveal-on-scroll">
+                <div class="feature-icon-box emerald">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 12px; color: var(--text-dark);">Category Budgets</h3>
+                <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.6;">
+                    Set monthly spending limits for rent, groceries, and textbooks with visual progress bars and instant over-budget alerts.
+                </p>
             </div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;">
-                <div class="card">
-                    <div class="stat-icon-wrapper bg-primary-light mb-3" style="margin-bottom: 16px;"><i class="fa-solid fa-scale-balanced text-primary"></i></div>
-                    <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 8px;">Semester Cashflow Planner</h3>
-                    <p class="text-muted" style="font-size: 0.95rem;">Map your bulk student funding across the term to calculate safe weekly allowances.</p>
-                </div>
-                <div class="card">
-                    <div class="stat-icon-wrapper bg-success-light mb-3" style="margin-bottom: 16px;"><i class="fa-solid fa-wallet text-success"></i></div>
-                    <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 8px;">Category Budgets</h3>
-                    <p class="text-muted" style="font-size: 0.95rem;">Set monthly spending limits for rent, groceries, and books with visual progress bars.</p>
-                </div>
-                <div class="card">
-                    <div class="stat-icon-wrapper bg-warning-light mb-3" style="margin-bottom: 16px;"><i class="fa-solid fa-piggy-bank text-warning"></i></div>
-                    <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 8px;">Savings Goals & Reports</h3>
-                    <p class="text-muted" style="font-size: 0.95rem;">Save for laptops and summer trips. Export transaction history to CSV or print PDF reports.</p>
-                </div>
-            </div>
-        </section>
 
-        <!-- FAQ Section -->
-        <section id="faq" style="padding: 60px 40px; background: var(--bg-card); border-top: 1px solid var(--border-color);">
-            <div style="max-width: 900px; margin: 0 auto;">
-                <h2 style="font-size: 2rem; font-weight: 800; text-align: center; margin-bottom: 40px;">Frequently Asked Questions</h2>
-                <div style="display: flex; flex-direction: column; gap: 20px;">
-                    <div class="card" style="background: var(--bg-input);">
-                        <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 8px;">Is EduFinance free to use?</h3>
-                        <p class="text-muted" style="font-size: 0.95rem;">Yes! EduFinance is completely free for students to track budgets and semester finances.</p>
-                    </div>
-                    <div class="card" style="background: var(--bg-input);">
-                        <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 8px;">How does cloud sync work?</h3>
-                        <p class="text-muted" style="font-size: 0.95rem;">EduFinance uses Firebase to securely back up your transactions and settings across devices when signed in.</p>
-                    </div>
-                    <div class="card" style="background: var(--bg-input);">
-                        <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 8px;">Can I export my financial reports?</h3>
-                        <p class="text-muted" style="font-size: 0.95rem;">Yes, you can filter transactions by date range and export to CSV or print formatted PDF logs with your unique account ID.</p>
-                    </div>
+            <div class="clean-card reveal-on-scroll">
+                <div class="feature-icon-box" style="background: rgba(217, 119, 6, 0.1); border-color: rgba(217, 119, 6, 0.2); color: #D97706;">
+                    <i class="fa-solid fa-piggy-bank"></i>
+                </div>
+                <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 12px; color: var(--text-dark);">Savings Goals & Reports</h3>
+                <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.6;">
+                    Save for laptops, certifications, and summer trips. Export clean transaction history to CSV or print professional PDF reports.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section id="faq" class="section-container">
+        <div class="reveal-on-scroll" style="text-align: center; margin-bottom: 40px;">
+            <h2 class="section-title">Frequently Asked Questions</h2>
+            <p class="section-subtitle">Got questions? We've got clear answers.</p>
+        </div>
+
+        <div class="faq-list reveal-on-scroll">
+            <div class="faq-item">
+                <button class="faq-question">
+                    <span>Is EduFinance free to use?</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+                <div class="faq-answer">
+                    Yes! EduFinance is completely free for students to track daily budgets, loan payouts, and semester finances without hidden fees.
                 </div>
             </div>
-        </section>
 
-        <!-- Footer -->
-        <footer style="background: var(--bg-sidebar); border-top: 1px solid var(--border-color); padding: 40px; text-align: center; display: flex; flex-direction: column; gap: 20px; align-items: center;">
-            <div class="logo">
-                <i class="fa-solid fa-graduation-cap logo-icon"></i>
-                <span>EduFinance</span>
+            <div class="faq-item">
+                <button class="faq-question">
+                    <span>How does cloud sync work?</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+                <div class="faq-answer">
+                    EduFinance uses secure Firebase cloud infrastructure to back up your transactions and settings across devices when signed into your student account.
+                </div>
             </div>
-            <div style="display: flex; gap: 24px; flex-wrap: wrap; justify-content: center;">
-                <a href="about.html" class="text-muted" style="text-decoration: none; font-size: 0.9rem;">About</a>
-                <a href="contact.html" class="text-muted" style="text-decoration: none; font-size: 0.9rem;">Contact</a>
-                <a href="privacy.html" class="text-muted" style="text-decoration: none; font-size: 0.9rem;">Privacy Policy</a>
-                <a href="terms.html" class="text-muted" style="text-decoration: none; font-size: 0.9rem;">Terms of Service</a>
+
+            <div class="faq-item">
+                <button class="faq-question">
+                    <span>Can I export my financial reports?</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+                <div class="faq-answer">
+                    Yes, you can filter transactions by date range and export them to CSV or print formatted PDF logs complete with your unique student account verification ID.
+                </div>
             </div>
-            <p class="text-muted" style="font-size: 0.85rem;">&copy; 2026 EduFinance. Empowering student financial success worldwide.</p>
-        </footer>
-    </div>
+
+            <div class="faq-item">
+                <button class="faq-question">
+                    <span>Is my financial data secure and private?</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+                <div class="faq-answer">
+                    Absolute security and privacy are our top priorities. All records are encrypted in transit and at rest, and we never share your financial data with third parties.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Visible Contact Section & CTA (Embedded Directly on Page) -->
+    <section id="contact" class="section-container">
+        <div class="reveal-on-scroll" style="text-align: center; margin-bottom: 50px;">
+            <h2 class="section-title">Get in Touch With Us</h2>
+            <p class="section-subtitle">We are here to help you navigate your student financial journey.</p>
+        </div>
+
+        <div class="clean-card reveal-on-scroll" style="padding: 50px;">
+            <div class="contact-cta-grid">
+                <!-- Left Column: Support Info & Primary CTA Callout -->
+                <div class="contact-info-box">
+                    <div>
+                        <span class="hero-badge" style="background: rgba(37, 99, 235, 0.1); border-color: rgba(37, 99, 235, 0.25); color: var(--primary); margin-bottom: 16px;">
+                            <i class="fa-solid fa-headset"></i> Live Student Support
+                        </span>
+                        <h3 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 14px; color: var(--text-dark);">We're Here For You</h3>
+                        <p style="color: var(--text-muted); font-size: 1rem; line-height: 1.6; margin-bottom: 30px;">
+                            Have questions about your semester forecast, bug reports, or feature requests? Drop us a line anytime.
+                        </p>
+
+                        <div class="support-meta">
+                            <div class="support-item">
+                                <i class="fa-solid fa-envelope"></i>
+                                <span>support@edufinance.app</span>
+                            </div>
+                            <div class="support-item">
+                                <i class="fa-solid fa-clock"></i>
+                                <span>Replies within 2 hours</span>
+                            </div>
+                            <div class="support-item">
+                                <i class="fa-solid fa-shield-halved"></i>
+                                <span>Encrypted & Confidential</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Callout Card inside Left Column -->
+                    <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; margin-top: 20px;">
+                        <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; color: var(--text-dark);">Ready to master your budget?</h4>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">Get started for free in under 2 minutes.</p>
+                        <a href="login.html" class="btn-modern btn-modern-primary" style="width: 100%; padding: 10px 20px; font-size: 0.9rem;">
+                            Get Started For Free <i class="fa-solid fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Right Column: Fully Functional Contact Form -->
+                <div>
+                    <form id="mainContactForm" onsubmit="handleContactSubmit(event)">
+                        <div class="form-floating-group">
+                            <label for="contactName" style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Your Name</label>
+                            <input type="text" id="contactName" class="form-control form-floating-control" placeholder="Alex Student" required>
+                        </div>
+
+                        <div class="form-floating-group">
+                            <label for="contactEmail" style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Student Email</label>
+                            <input type="email" id="contactEmail" class="form-control form-floating-control" placeholder="student@university.edu" required>
+                        </div>
+
+                        <div class="form-floating-group">
+                            <label for="contactSubject" style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Subject</label>
+                            <input type="text" id="contactSubject" class="form-control form-floating-control" placeholder="Budget sync or feedback" required>
+                        </div>
+
+                        <div class="form-floating-group">
+                            <label for="contactMsg" style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Message</label>
+                            <textarea id="contactMsg" class="form-control form-floating-control" rows="4" placeholder="How can we assist your semester planning?" required style="resize: vertical;"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn-modern btn-modern-primary" style="width: 100%;">
+                            <i class="fa-solid fa-paper-plane"></i> Send Message
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contrast Dark Footer -->
+    <footer class="footer-contrast">
+        <div class="footer-grid">
+            <div class="footer-col">
+                <a href="index.html" class="logo" style="margin-bottom: 16px; color: #FFFFFF;">
+                    <i class="fa-solid fa-graduation-cap logo-icon"></i>
+                    <span>EduFinance</span>
+                </a>
+                <p style="color: #94A3B8; font-size: 0.9rem; line-height: 1.6;">
+                    Empowering student financial success worldwide with intelligent cashflow planning and secure budget tracking.
+                </p>
+            </div>
+
+            <div class="footer-col">
+                <h4>Navigation</h4>
+                <ul>
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#aim">Aim & Purpose</a></li>
+                    <li><a href="#faq">FAQ</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4>Legal & Policy</h4>
+                <ul>
+                    <li><a href="privacy.html">Privacy Policy</a></li>
+                    <li><a href="terms.html">Terms of Service</a></li>
+                    <li><a href="about.html">About Us</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4>Stay Updated</h4>
+                <p style="color: #94A3B8; font-size: 0.85rem; margin-bottom: 12px;">Subscribe to our student finance newsletter.</p>
+                <form class="newsletter-form" onsubmit="event.preventDefault(); alert('Subscribed successfully!'); this.reset();">
+                    <input type="email" class="newsletter-input" placeholder="Your student email" required>
+                    <button type="submit" class="btn-modern btn-modern-primary" style="padding: 10px 16px; font-size: 0.85rem;">Join</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <span>&copy; 2026 EduFinance. All rights reserved.</span>
+            <span style="display: flex; gap: 20px;">
+                <a href="privacy.html" style="color: #94A3B8; text-decoration: none;">Privacy</a>
+                <a href="terms.html" style="color: #94A3B8; text-decoration: none;">Terms</a>
+                <a href="contact.html" style="color: #94A3B8; text-decoration: none;">Support</a>
+            </span>
+        </div>
+    </footer>
+
+    <!-- JavaScript Interactivity -->
+    <script>
+        // Hamburger Menu & Mobile Drawer Toggle
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const mobileDrawer = document.getElementById('mobileDrawer');
+
+        hamburgerBtn.addEventListener('click', () => {
+            hamburgerBtn.classList.toggle('active');
+            mobileDrawer.classList.toggle('open');
+        });
+
+        // Close mobile drawer when clicking a link
+        document.querySelectorAll('.mobile-nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                hamburgerBtn.classList.remove('active');
+                mobileDrawer.classList.remove('open');
+            });
+        });
+
+        // FAQ Accordions
+        document.querySelectorAll('.faq-question').forEach(question => {
+            question.addEventListener('click', () => {
+                const item = question.parentElement;
+                const isActive = item.classList.contains('active');
+                
+                // Close all FAQ items
+                document.querySelectorAll('.faq-item').forEach(faq => {
+                    faq.classList.remove('active');
+                });
+
+                // If wasn't active, open it
+                if (!isActive) {
+                    item.classList.add('active');
+                }
+            });
+        });
+
+        // Scroll-Triggered Reveal Animation via IntersectionObserver
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('revealed');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal-on-scroll').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Contact Form Submission Handler
+        function handleContactSubmit(event) {
+            event.preventDefault();
+            const name = document.getElementById('contactName').value;
+            const email = document.getElementById('contactEmail').value;
+            const subject = document.getElementById('contactSubject').value;
+            const msg = document.getElementById('contactMsg').value;
+
+            if (!name || !email || !msg) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            // Success simulation
+            alert(`Thank you, ${name}! Your message has been sent successfully. Our support team will reply to ${email} within 2 hours.`);
+            document.getElementById('mainContactForm').reset();
+        }
+    </script>
 </body>
 </html>

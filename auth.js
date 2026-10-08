@@ -1,6 +1,6 @@
 /* =========================================
-   EduFinance - Auth Script (login.html)
-   ========================================= */
+    EduFinance - Auth Script (login.html)
+    ========================================= */
 
 const firebaseConfig = {
     apiKey: "AIzaSyCoYCIqZH-HOrT6TDOHCxEx2gwDkwdWUB4",
@@ -22,149 +22,289 @@ try {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const authPageForm = document.getElementById('authPageForm');
+    const loginSection = document.getElementById('login-section');
+    const signupSection = document.getElementById('signup-section');
+    const showSignupBtn = document.getElementById('showSignupBtn');
+    const showLoginBtn = document.getElementById('showLoginBtn');
+
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
     const googleLoginBtn = document.getElementById('googleLoginBtn');
-    const switchModeLink = document.getElementById('switchModeLink');
-    const authTitle = document.getElementById('authTitle');
-    const authSub = document.getElementById('authSub');
-    const authActionBtn = document.getElementById('authActionBtn');
-    const signupFieldsContainer = document.getElementById('signupFieldsContainer');
-    const confirmPasswordGroup = document.getElementById('confirmPasswordGroup');
-    const switchPromptText = document.getElementById('switchPromptText');
-    const dividerText = document.getElementById('dividerText');
+    const googleSignupBtn = document.getElementById('googleSignupBtn');
+
+    // Wizard panes & step pills
+    const paneStep1 = document.getElementById('paneStep1');
+    const paneStep2 = document.getElementById('paneStep2');
+    const paneStep3 = document.getElementById('paneStep3');
+    const wStep1 = document.getElementById('wStep1');
+    const wStep2 = document.getElementById('wStep2');
+    const wStep3 = document.getElementById('wStep3');
+
+    const nextToStep2 = document.getElementById('nextToStep2');
+    const nextToStep3 = document.getElementById('nextToStep3');
+    const backToStep1 = document.getElementById('backToStep1');
+    const backToStep2 = document.getElementById('backToStep2');
+
+    const signupUsername = document.getElementById('signupUsername');
+    const usernameStatus = document.getElementById('usernameStatus');
 
     const googleInfoModal = document.getElementById('googleInfoModal');
     const googleInfoForm = document.getElementById('googleInfoForm');
     let pendingGoogleUser = null;
+    let usernameAvailable = false;
+    let usernameCheckTimeout = null;
 
-    let isSignup = false;
-
-    // Currency dropdowns: preselect from device, user can change
+    // Currency dropdowns
     const detectedCurrency = EduCurrency.detect();
-    EduCurrency.populateSelect(document.getElementById('currencyInput'), detectedCurrency);
-    EduCurrency.populateSelect(document.getElementById('googleCurrency'), detectedCurrency);
+    const signupCurrencyEl = document.getElementById('signupCurrency');
+    const googleCurrencyEl = document.getElementById('googleCurrency');
+    if (signupCurrencyEl) EduCurrency.populateSelect(signupCurrencyEl, detectedCurrency);
+    if (googleCurrencyEl) EduCurrency.populateSelect(googleCurrencyEl, detectedCurrency);
 
-    if (switchModeLink) {
-        switchModeLink.addEventListener('click', (e) => {
+    // View Toggles
+    if (showSignupBtn) {
+        showSignupBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            isSignup = !isSignup;
-            if (isSignup) {
-                authTitle.textContent = 'Create Student Account';
-                authSub.textContent = 'Join EduFinance to master your student finances';
-                authActionBtn.textContent = 'Sign Up';
-                if (signupFieldsContainer) signupFieldsContainer.style.display = 'flex';
-                if (confirmPasswordGroup) confirmPasswordGroup.style.display = 'block';
-                if (switchPromptText) switchPromptText.textContent = 'Already have an account?';
-                switchModeLink.textContent = 'Login';
-            } else {
-                authTitle.textContent = 'Welcome Back';
-                authSub.textContent = 'Sign in to access your student budget tracker';
-                authActionBtn.textContent = 'Login';
-                if (signupFieldsContainer) signupFieldsContainer.style.display = 'none';
-                if (confirmPasswordGroup) confirmPasswordGroup.style.display = 'none';
-                if (switchPromptText) switchPromptText.textContent = "Don't have an account?";
-                switchModeLink.textContent = 'Sign Up';
-            }
+            if (loginSection) loginSection.classList.add('hidden');
+            if (signupSection) signupSection.classList.remove('hidden');
+            goToStep(1);
         });
     }
 
-    if (authPageForm) {
-        authPageForm.addEventListener('submit', async (e) => {
+    if (showLoginBtn) {
+        showLoginBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            const email = document.getElementById('emailInput').value.trim();
-            const password = document.getElementById('passwordInput').value;
+            if (signupSection) signupSection.classList.add('hidden');
+            if (loginSection) loginSection.classList.remove('hidden');
+        });
+    }
 
-            try {
-                if (isSignup) {
-                    const confirmPassword = document.getElementById('confirmPasswordInput').value;
-                    if (password !== confirmPassword) {
-                        showToast('Passwords do not match.', 'error');
-                        return;
-                    }
+    function goToStep(step) {
+        if (paneStep1) paneStep1.classList.remove('active');
+        if (paneStep2) paneStep2.classList.remove('active');
+        if (paneStep3) paneStep3.classList.remove('active');
 
-                    const username = document.getElementById('usernameInput').value.trim() || email.split('@')[0];
-                    const firstName = document.getElementById('firstNameInput').value.trim();
-                    const lastName = document.getElementById('lastNameInput').value.trim();
-                    const dob = document.getElementById('dobInput').value;
-                    const currency = EduCurrency.toCode(document.getElementById('currencyInput').value);
+        if (wStep1) wStep1.className = 'wizard-step';
+        if (wStep2) wStep2.className = 'wizard-step';
+        if (wStep3) wStep3.className = 'wizard-step';
 
-                    if (!dob) {
-                        showToast('Please enter your date of birth.', 'error');
-                        return;
-                    }
+        if (step === 1) {
+            if (paneStep1) paneStep1.classList.add('active');
+            if (wStep1) wStep1.classList.add('active');
+        } else if (step === 2) {
+            if (paneStep2) paneStep2.classList.add('active');
+            if (wStep1) wStep1.classList.add('completed');
+            if (wStep2) wStep2.classList.add('active');
+        } else if (step === 3) {
+            if (paneStep3) paneStep3.classList.add('active');
+            if (wStep1) wStep1.classList.add('completed');
+            if (wStep2) wStep2.classList.add('completed');
+            if (wStep3) wStep3.classList.add('active');
+        }
+    }
 
-                    // Validate age >= 13
-                    const dobDate = new Date(dob);
-                    const today = new Date();
-                    let age = today.getFullYear() - dobDate.getFullYear();
-                    const m = today.getMonth() - dobDate.getMonth();
-                    if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) {
-                        age--;
-                    }
-                    if (age < 13) {
-                        showToast('You must be at least 13 years old to create an account.', 'error');
-                        return;
-                    }
+    // Step 1 -> Step 2
+    if (nextToStep2) {
+        nextToStep2.addEventListener('click', () => {
+            const email = document.getElementById('signupEmail').value.trim();
+            const password = document.getElementById('signupPassword').value;
 
-                    const userCred = await auth.createUserWithEmailAndPassword(email, password);
-                    const user = userCred.user;
-                    const accountId = 'EDU-' + Math.floor(100000 + Math.random() * 900000);
+            if (!email || !password) {
+                showToast('Please enter your email and password.', 'error');
+                return;
+            }
+            if (password.length < 6) {
+                showToast('Password must be at least 6 characters.', 'error');
+                return;
+            }
+            goToStep(2);
+        });
+    }
 
-                    await user.updateProfile({ displayName: username });
+    if (backToStep1) {
+        backToStep1.addEventListener('click', () => goToStep(1));
+    }
 
+    // Real-time Username Uniqueness Check
+    if (signupUsername) {
+        signupUsername.addEventListener('input', () => {
+            const val = signupUsername.value.trim().toLowerCase();
+            if (!val) {
+                if (usernameStatus) usernameStatus.style.display = 'none';
+                return;
+            }
+            if (val.length < 3) {
+                if (usernameStatus) {
+                    usernameStatus.style.display = 'flex';
+                    usernameStatus.className = 'username-status taken';
+                    usernameStatus.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Username must be at least 3 characters.';
+                }
+                usernameAvailable = false;
+                return;
+            }
+
+            if (usernameStatus) {
+                usernameStatus.style.display = 'flex';
+                usernameStatus.className = 'username-status checking';
+                usernameStatus.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking availability...';
+            }
+
+            clearTimeout(usernameCheckTimeout);
+            usernameCheckTimeout = setTimeout(async () => {
+                try {
                     if (db) {
-                        await db.collection('users').doc(user.uid).collection('settings').doc('profile').set({
-                            username,
-                            firstName,
-                            lastName,
-                            dob,
-                            accountId,
-                            currency,
-                            avatar: 'fa-user-graduate'
-                        });
+                        const snapshot = await db.collectionGroup('settings').where('username', '==', val).get();
+                        if (!snapshot.empty) {
+                            if (usernameStatus) {
+                                usernameStatus.className = 'username-status taken';
+                                usernameStatus.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Username is already taken.';
+                            }
+                            usernameAvailable = false;
+                            return;
+                        }
                     }
-
-                    showToast('Account created successfully!', 'success');
-                } else {
-                    await auth.signInWithEmailAndPassword(email, password);
-                    showToast('Logged in successfully!', 'success');
+                    if (usernameStatus) {
+                        usernameStatus.className = 'username-status available';
+                        usernameStatus.innerHTML = '<i class="fa-solid fa-circle-check"></i> Username available!';
+                    }
+                    usernameAvailable = true;
+                } catch (err) {
+                    console.error("Username check error:", err);
+                    if (usernameStatus) {
+                        usernameStatus.className = 'username-status available';
+                        usernameStatus.innerHTML = '<i class="fa-solid fa-circle-check"></i> Username available!';
+                    }
+                    usernameAvailable = true;
                 }
-                localStorage.setItem('edu_is_logged_in', 'true');
-                setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 1000);
-            } catch (err) {
-                console.error("Auth error:", err);
-                showToast(err.message, 'error');
-            }
+            }, 500);
         });
     }
 
-    if (googleLoginBtn) {
-        googleLoginBtn.addEventListener('click', async () => {
+    // Step 2 -> Step 3
+    if (nextToStep3) {
+        nextToStep3.addEventListener('click', () => {
+            const firstName = document.getElementById('signupFirstName').value.trim();
+            const lastName = document.getElementById('signupLastName').value.trim();
+            const username = signupUsername.value.trim();
+            const dob = document.getElementById('signupDob').value;
+
+            if (!firstName || !lastName || !username || !dob) {
+                showToast('Please fill in all profile details.', 'error');
+                return;
+            }
+
+            // Validate age >= 13
+            const dobDate = new Date(dob);
+            const today = new Date();
+            let age = today.getFullYear() - dobDate.getFullYear();
+            const m = today.getMonth() - dobDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) {
+                age--;
+            }
+            if (age < 13) {
+                showToast('You must be at least 13 years old to create an account.', 'error');
+                return;
+            }
+
+            goToStep(3);
+        });
+    }
+
+    if (backToStep2) {
+        backToStep2.addEventListener('click', () => goToStep(2));
+    }
+
+    // Login Form Submit
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
             try {
-                const res = await auth.signInWithPopup(googleProvider);
-                const user = res.user;
-                if (db) {
-                    const profileRef = db.collection('users').doc(user.uid).collection('settings').doc('profile');
-                    const snap = await profileRef.get();
-                    if (!snap.exists) {
-                        pendingGoogleUser = user;
-                        if (googleInfoModal) googleInfoModal.classList.add('show');
-                        return;
-                    }
-                }
+                await auth.signInWithEmailAndPassword(email, password);
+                showToast('Logged in successfully!', 'success');
                 localStorage.setItem('edu_is_logged_in', 'true');
-                showToast('Google login successful!', 'success');
                 setTimeout(() => {
                     window.location.href = 'dashboard.html';
                 }, 1000);
             } catch (err) {
-                console.error("Google auth error:", err);
+                console.error("Login error:", err);
                 showToast(err.message, 'error');
             }
         });
     }
+
+    // Signup Form Submit (Step 3 Complete)
+    if (signupForm) {
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('signupEmail').value.trim();
+            const password = document.getElementById('signupPassword').value;
+            const firstName = document.getElementById('signupFirstName').value.trim();
+            const lastName = document.getElementById('signupLastName').value.trim();
+            const username = signupUsername.value.trim();
+            const dob = document.getElementById('signupDob').value;
+            const currency = EduCurrency.toCode(signupCurrencyEl ? signupCurrencyEl.value : 'USD');
+
+            try {
+                const userCred = await auth.createUserWithEmailAndPassword(email, password);
+                const user = userCred.user;
+                const accountId = 'EDU-' + Math.floor(100000 + Math.random() * 900000);
+
+                await user.updateProfile({ displayName: username });
+
+                if (db) {
+                    await db.collection('users').doc(user.uid).collection('settings').doc('profile').set({
+                        username,
+                        firstName,
+                        lastName,
+                        dob,
+                        accountId,
+                        currency,
+                        avatar: 'fa-user-graduate'
+                    });
+                }
+
+                showToast('Account created successfully!', 'success');
+                localStorage.setItem('edu_is_logged_in', 'true');
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1000);
+            } catch (err) {
+                console.error("Signup error:", err);
+                showToast(err.message, 'error');
+            }
+        });
+    }
+
+    // Google Auth Handler
+    const handleGoogleAuth = async () => {
+        try {
+            const res = await auth.signInWithPopup(googleProvider);
+            const user = res.user;
+            if (db) {
+                const profileRef = db.collection('users').doc(user.uid).collection('settings').doc('profile');
+                const snap = await profileRef.get();
+                if (!snap.exists) {
+                    pendingGoogleUser = user;
+                    if (googleInfoModal) googleInfoModal.classList.add('show');
+                    return;
+                }
+            }
+            localStorage.setItem('edu_is_logged_in', 'true');
+            showToast('Google login successful!', 'success');
+            setTimeout(() => {
+                window.location.href = 'dashboard.html';
+            }, 1000);
+        } catch (err) {
+            console.error("Google auth error:", err);
+            showToast(err.message, 'error');
+        }
+    };
+
+    if (googleLoginBtn) googleLoginBtn.addEventListener('click', handleGoogleAuth);
+    if (googleSignupBtn) googleSignupBtn.addEventListener('click', handleGoogleAuth);
 
     if (googleInfoForm) {
         googleInfoForm.addEventListener('submit', async (e) => {
@@ -175,14 +315,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const firstName = document.getElementById('googleFirstName').value.trim();
             const lastName = document.getElementById('googleLastName').value.trim();
             const dob = document.getElementById('googleDob').value;
-            const currency = EduCurrency.toCode(document.getElementById('googleCurrency').value);
+            const currency = EduCurrency.toCode(googleCurrencyEl ? googleCurrencyEl.value : 'USD');
 
             if (!dob) {
                 showToast('Please enter your date of birth.', 'error');
                 return;
             }
 
-            // Validate age >= 13
             const dobDate = new Date(dob);
             const today = new Date();
             let age = today.getFullYear() - dobDate.getFullYear();
