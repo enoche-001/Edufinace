@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>EduFinance Admin Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body class="login-body">
+    <main class="login-card">
+        <div class="login-brand">
+            <div class="sb-logo"><i class="fa-solid fa-graduation-cap"></i></div>
+            <div>
+                <h1>Admin Login</h1>
+                <p class="muted">EduFinance staff only</p>
+            </div>
+        </div>
+
+        <form id="adminLoginForm" class="login-form" novalidate>
+            <div class="login-error" id="loginError" role="alert" hidden></div>
+            <div class="field">
+                <label for="adminEmailInput">Email</label>
+                <input type="email" id="adminEmailInput" autocomplete="username" required>
+            </div>
+            <div class="field">
+                <label for="adminPassInput">Password</label>
+                <div class="pw-wrap">
+                    <input type="password" id="adminPassInput" autocomplete="current-password" required>
+                    <button type="button" class="pw-toggle" id="pwToggle" aria-label="Show password"><i class="fa-solid fa-eye"></i></button>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block" id="loginBtn">Sign in</button>
+        </form>
+
+        <p class="login-foot muted">Admin accounts are created by the site owner. There is no sign-up.</p>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="admin-login.js"></script>
+</body>
+</html>

@@ -963,7 +963,7 @@
             <div class="footer-col">
                 <h4>Stay Updated</h4>
                 <p style="color: #94A3B8; font-size: 0.85rem; margin-bottom: 12px;">Subscribe to our student finance newsletter.</p>
-                <form class="newsletter-form" onsubmit="event.preventDefault(); alert('Subscribed successfully!'); this.reset();">
+                <form class="newsletter-form">
                     <input type="email" class="newsletter-input" placeholder="Your student email" required>
                     <button type="submit" class="btn-modern btn-modern-primary" style="padding: 10px 16px; font-size: 0.85rem;">Join</button>
                 </form>
@@ -1054,5 +1054,8 @@
             document.getElementById('mainContactForm').reset();
         }
     </script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="public-forms.js"></script>
 </body>
 </html>

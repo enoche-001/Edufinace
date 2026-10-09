@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>EduFinance Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body class="checking">
+
+    <!-- Shown while the auth guard verifies admin access -->
+    <div class="guard-screen" id="guardScreen">
+        <i class="fa-solid fa-shield-halved"></i>
+        <p>Verifying admin access…</p>
+    </div>
+
+    <div class="shell" id="shell">
+
+        <!-- ============ SIDEBAR ============ -->
+        <aside class="sidebar" id="sidebar" aria-label="Admin navigation">
+            <div class="sb-brand">
+                <div class="sb-logo"><i class="fa-solid fa-graduation-cap"></i></div>
+                <div class="sb-brand-text">
+                    <strong>EduFinance</strong>
+                    <span class="tag-admin">Admin</span>
+                </div>
+                <button class="icon-btn sb-close" id="sidebarClose" aria-label="Close menu"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="status-badge" id="sysStatus"><span class="dot"></span><span id="sysStatusText">System Online</span></div>
+
+            <nav class="sb-nav">
+                <a href="#overview" class="nav-link active" data-view="overview"><i class="fa-solid fa-chart-line"></i> Overview / Analytics</a>
+                <a href="#students" class="nav-link" data-view="students"><i class="fa-solid fa-user-graduate"></i> Student Accounts</a>
+                <a href="#support" class="nav-link" data-view="support"><i class="fa-solid fa-headset"></i> Support Tickets <span class="nav-count" id="navTicketCount" hidden>0</span></a>
+                <a href="#newsletter" class="nav-link" data-view="newsletter"><i class="fa-solid fa-envelope-open-text"></i> Newsletter Subscribers</a>
+                <a href="#logs" class="nav-link" data-view="logs"><i class="fa-solid fa-terminal"></i> System Logs</a>
+            </nav>
+
+            <div class="sb-user">
+                <div class="avatar" id="adminAvatar">A</div>
+                <div class="sb-user-info">
+                    <strong id="adminName">Admin</strong>
+                    <span id="adminEmail">—</span>
+                </div>
+                <button class="icon-btn" id="logoutBtn" title="Logout" aria-label="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
+            </div>
+        </aside>
+        <div class="sb-overlay" id="sbOverlay"></div>
+
+        <!-- ============ MAIN ============ -->
+        <div class="main">
+            <header class="topbar">
+                <button class="icon-btn hamburger" id="hamburger" aria-label="Open menu"><i class="fa-solid fa-bars"></i></button>
+
+                <div class="search">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="search" id="searchInput" placeholder="Search student name, @username, or ticket ID..." autocomplete="off">
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-outline" id="exportBtn"><i class="fa-solid fa-file-csv"></i> <span class="hide-sm">Export All Data (CSV)</span></button>
+                    <button class="icon-btn bell" id="bellBtn" aria-label="Open support tickets" title="Open tickets">
+                        <i class="fa-solid fa-bell"></i>
+                        <span class="bell-badge" id="bellBadge" hidden>0</span>
+                    </button>
+                    <button class="icon-btn" id="refreshBtn" aria-label="Refresh data" title="Refresh data"><i class="fa-solid fa-rotate"></i></button>
+                </div>
+            </header>
+
+            <main class="content">
+
+                <!-- KPI cards (always visible) -->
+                <section class="kpis" id="kpis">
+                    <article class="card kpi">
+                        <div class="kpi-top"><span class="kpi-label">Total Active Students</span><i class="fa-solid fa-user-graduate kpi-ic"></i></div>
+                        <div class="kpi-val" id="kpiStudents">—</div>
+                        <div class="kpi-foot"><span class="pill pill-up" id="kpiStudentsDelta">—</span> <span class="muted" id="kpiStudentsSub">vs. previous 30 days</span></div>
+                    </article>
+                    <article class="card kpi">
+                        <div class="kpi-top"><span class="kpi-label">Total Cashflow Volume</span><i class="fa-solid fa-sack-dollar kpi-ic"></i></div>
+                        <div class="kpi-val" id="kpiVolume">—</div>
+                        <div class="kpi-foot"><span class="muted" id="kpiVolumeSub">tracked</span></div>
+                    </article>
+                    <article class="card kpi">
+                        <div class="kpi-top"><span class="kpi-label">Pending Support Tickets</span><i class="fa-solid fa-headset kpi-ic"></i></div>
+                        <div class="kpi-val" id="kpiTickets">—</div>
+                        <div class="kpi-foot"><span class="muted" id="kpiTicketsSub">awaiting response</span></div>
+                    </article>
+                    <article class="card kpi">
+                        <div class="kpi-top"><span class="kpi-label">Newsletter Subscribers</span><i class="fa-solid fa-envelope-open-text kpi-ic"></i></div>
+                        <div class="kpi-val" id="kpiSubs">—</div>
+                        <div class="kpi-foot"><span class="muted" id="kpiSubsSub">subscribed</span></div>
+                    </article>
+                </section>
+
+                <div class="load-error" id="loadError" hidden></div>
+
+                <!-- ===== OVERVIEW ===== -->
+                <section class="view active" id="view-overview">
+                    <div class="grid-analytics">
+                        <article class="card">
+                            <div class="card-head">
+                                <div><h2>Platform Usage</h2><p class="muted">Monthly active students vs. new sign-ups (last 6 months)</p></div>
+                            </div>
+                            <div class="chart-wrap"><canvas id="usageChart" aria-label="Monthly active students and new sign-ups" role="img"></canvas></div>
+                            <p class="empty" id="usageEmpty" hidden>No activity data yet.</p>
+                        </article>
+                        <article class="card">
+                            <div class="card-head">
+                                <div><h2>Spending Categories</h2><p class="muted" id="catSub">Share of expenses</p></div>
+                            </div>
+                            <div class="cat-list" id="catList"></div>
+                        </article>
+                    </div>
+
+                    <article class="card">
+                        <div class="card-head">
+                            <div><h2>Support Queue</h2><p class="muted">Most recent open tickets</p></div>
+                            <a href="#support" class="link">View all</a>
+                        </div>
+                        <div class="table-scroll"><table class="tbl" id="overviewTickets"></table></div>
+                    </article>
+                </section>
+
+                <!-- ===== STUDENTS ===== -->
+                <section class="view" id="view-students">
+                    <article class="card flush">
+                        <div class="card-head pad">
+                            <div><h2>Student Accounts</h2><p class="muted">Read-only view of every registered profile</p></div>
+                        </div>
+                        <div class="tabs" id="studentTabs" role="tablist">
+                            <button class="tab active" data-filter="all" role="tab">All Students <span class="tab-n" data-n="all">0</span></button>
+                            <button class="tab" data-filter="verified" role="tab">Verified (.edu) <span class="tab-n" data-n="verified">0</span></button>
+                            <button class="tab" data-filter="flagged" role="tab">Flagged <span class="tab-n" data-n="flagged">0</span></button>
+                            <button class="tab" data-filter="inactive" role="tab">Inactive <span class="tab-n" data-n="inactive">0</span></button>
+                        </div>
+                        <div class="table-scroll">
+                            <table class="tbl sticky-first" id="studentTable">
+                                <thead>
+                                    <tr>
+                                        <th>Student</th>
+                                        <th>Username</th>
+                                        <th>University Email</th>
+                                        <th>Date Joined</th>
+                                        <th>Status</th>
+                                        <th class="th-actions"><span class="sr-only">Actions</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="studentBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="pager">
+                            <span class="muted" id="pagerInfo">Showing 0 of 0 students</span>
+                            <div class="pager-btns">
+                                <button class="btn btn-outline btn-sm" id="prevPage"><i class="fa-solid fa-chevron-left"></i> Previous</button>
+                                <button class="btn btn-outline btn-sm" id="nextPage">Next <i class="fa-solid fa-chevron-right"></i></button>
+                            </div>
+                        </div>
+                    </article>
+                </section>
+
+                <!-- ===== SUPPORT ===== -->
+                <section class="view" id="view-support">
+                    <article class="card flush">
+                        <div class="card-head pad">
+                            <div><h2>Support Tickets</h2><p class="muted">Messages from the Contact Us form · live</p></div>
+                        </div>
+                        <div class="tabs" id="ticketTabs" role="tablist">
+                            <button class="tab active" data-filter="open" role="tab">Open</button>
+                            <button class="tab" data-filter="resolved" role="tab">Resolved</button>
+                            <button class="tab" data-filter="all" role="tab">All</button>
+                        </div>
+                        <div class="table-scroll">
+                            <table class="tbl sticky-first" id="ticketTable">
+                                <thead>
+                                    <tr><th>Ticket</th><th>From</th><th>Subject</th><th>Received</th><th>Status</th></tr>
+                                </thead>
+                                <tbody id="ticketBody"></tbody>
+                            </table>
+                        </div>
+                    </article>
+                </section>
+
+                <!-- ===== NEWSLETTER ===== -->
+                <section class="view" id="view-newsletter">
+                    <article class="card flush">
+                        <div class="card-head pad">
+                            <div><h2>Newsletter Subscribers</h2><p class="muted">Sign-ups from the landing page footer · live</p></div>
+                        </div>
+                        <div class="table-scroll">
+                            <table class="tbl sticky-first" id="subTable">
+                                <thead><tr><th>Email</th><th>Subscribed</th><th class="th-actions"><span class="sr-only">Actions</span></th></tr></thead>
+                                <tbody id="subBody"></tbody>
+                            </table>
+                        </div>
+                    </article>
+                </section>
+
+                <!-- ===== LOGS ===== -->
+                <section class="view" id="view-logs">
+                    <article class="card flush">
+                        <div class="card-head pad">
+                            <div><h2>System Logs</h2><p class="muted">Events from this admin session (cleared when you close the page)</p></div>
+                            <button class="btn btn-outline btn-sm" id="clearLogs">Clear</button>
+                        </div>
+                        <div class="logs" id="logList"></div>
+                    </article>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Row actions menu -->
+    <div class="menu" id="rowMenu" role="menu" hidden></div>
+
+    <!-- ============ TICKET DRAWER ============ -->
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+    <aside class="drawer" id="ticketDrawer" aria-hidden="true" aria-labelledby="dwSubject">
+        <div class="drawer-head">
+            <div>
+                <span class="muted" id="dwId">Ticket</span>
+                <h3 id="dwSubject">Subject</h3>
+            </div>
+            <button class="icon-btn" id="drawerClose" aria-label="Close ticket"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="drawer-body">
+            <dl class="meta">
+                <div><dt>Name</dt><dd id="dwName">—</dd></div>
+                <div><dt>Email</dt><dd id="dwEmail">—</dd></div>
+                <div><dt>Received</dt><dd id="dwTime">—</dd></div>
+                <div><dt>Status</dt><dd id="dwStatus">—</dd></div>
+            </dl>
+            <h4>Message</h4>
+            <div class="msg-body" id="dwMessage"></div>
+
+            <div id="dwRepliesWrap" hidden>
+                <h4>Replies sent</h4>
+                <div id="dwReplies"></div>
+            </div>
+
+            <form id="replyForm" class="reply">
+                <label for="replyText">Quick reply</label>
+                <textarea id="replyText" rows="5" maxlength="4000" placeholder="Write your reply…" required></textarea>
+                <p class="muted small">Saving a reply records it on the ticket and opens your email app with the message ready to send to the student.</p>
+                <div class="reply-actions">
+                    <button type="submit" class="btn btn-primary" id="sendReplyBtn"><i class="fa-solid fa-paper-plane"></i> Send reply</button>
+                    <button type="button" class="btn btn-success" id="resolveBtn"><i class="fa-solid fa-circle-check"></i> Mark as Resolved</button>
+                </div>
+            </form>
+        </div>
+    </aside>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>

@@ -111,6 +111,37 @@ service cloud.firestore {
       allow read: if isAdmin();
     }
 
+    // Contact Us form -> support_tickets. Anyone can submit a new ticket (checked for shape
+    // and size). Only admins can read them, and the only edits an admin can make are
+    // status, replies and resolved info.
+    match /support_tickets/{ticketId} {
+      allow create: if request.resource.data.keys().hasOnly(['name', 'email', 'subject', 'message', 'status', 'createdAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80
+        && request.resource.data.email is string && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$') && request.resource.data.email.size() <= 120
+        && request.resource.data.subject is string && request.resource.data.subject.size() > 0 && request.resource.data.subject.size() <= 120
+        && request.resource.data.message is string && request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 2000
+        && request.resource.data.status == 'open'
+        && request.resource.data.createdAt == request.time;
+      allow read: if isAdmin();
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'replies', 'resolvedAt', 'resolvedBy']);
+      allow delete: if isAdmin();
+    }
+
+    // Landing page newsletter form. The document id IS the lowercase email, so the same
+    // address cannot be added twice (a second attempt becomes an update, which is denied).
+    match /newsletter_subscribers/{emailId} {
+      allow create: if request.resource.data.keys().hasOnly(['email', 'active', 'subscribedAt'])
+        && request.resource.data.email is string && request.resource.data.email.size() <= 120
+        && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
+        && request.resource.data.email == emailId
+        && request.resource.data.email == request.resource.data.email.lower()
+        && request.resource.data.active == true
+        && request.resource.data.subscribedAt == request.time;
+      allow read, delete: if isAdmin();
+      allow update: if false;
+    }
+
     // Anything not listed above is denied by default.
   }
 }
@@ -134,6 +165,13 @@ service cloud.firestore {
 - Each admin read of a protected document costs one extra read for the admin check on the query. The admin page loads everything in one go and has a Refresh cooldown to keep reads low.
 - Profile documents now also store `email` and `createdAt` (older accounts are filled in the next time they open the app).
 
+## Setting up your first admin
+
+1. Sign up / log in to EduFinance normally with the account you want to make admin.
+2. Firebase Console > Authentication > Users: copy that account's **User UID**.
+3. Firebase Console > Firestore > **Start collection** `admins`, Document ID = the UID, add any field (e.g. `role: "owner"`).
+4. Open `admin-login.html` and sign in with that email and password (there is no sign-up). Anyone who is not in `admins` is signed out and refused.
+
 ## Test in the Rules Playground before publishing
 
 Firebase Console > Firestore > Rules > **Rules Playground**, signed in as a test user:
@@ -143,4 +181,6 @@ Firebase Console > Firestore > Rules > **Rules Playground**, signed in as a test
 3. Same path with no `dob` field should be **denied**.
 4. `add` on `users/{uid}/transactions` for a user whose profile does not exist should be **denied**.
 5. Signed in as a normal user, `get` on `admins/{your-uid}` should be **denied**, and a collection-group `list` on `transactions` should be **denied**.
-6. Signed in as an admin (your UID exists in `admins`), a `get` on `users/{any-uid}/transactions/{id}` should be **allowed**, and a `create` there should be **denied**.
+6. Signed out, `create` on `support_tickets` with name, email, subject, message, `status: "open"` and `createdAt` = request time should be **allowed**; `get`/`list` should be **denied**.
+7. Signed out, `create` on `newsletter_subscribers/a@b.com` with `email: "a@b.com"`, `active: true`, `subscribedAt` = request time should be **allowed**; a second `set` on the same path should be **denied**.
+8. Signed in as an admin (your UID exists in `admins`), a `get` on `users/{any-uid}/transactions/{id}` should be **allowed**, and a `create` there should be **denied**.

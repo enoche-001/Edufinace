@@ -54,6 +54,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let usernameAvailable = false;
     let usernameCheckTimeout = null;
 
+    // Sent here by admin.html when the signed-in user isn't an admin
+    if (new URLSearchParams(window.location.search).get('error') === 'unauthorized') {
+        showToast('You do not have admin access.', 'error');
+    }
+
     // Currency dropdowns
     const detectedCurrency = EduCurrency.detect();
     const signupCurrencyEl = document.getElementById('signupCurrency');
