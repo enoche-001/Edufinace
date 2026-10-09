@@ -3,11 +3,10 @@
    Calls the secure proxy hosted on Vercel.
    ========================================= */
 
-// TODO: replace with YOUR Vercel address after deploying edufinance-api
-const GEMINI_API_URL = "https://YOUR-PROJECT.vercel.app/api/gemini";
+const GEMINI_API_URL = "https://edufinanceapi.vercel.app/api/gemini";
 
 async function getGeminiFinancialAdvice(summaryData) {
-    if (GEMINI_API_URL.includes("YOUR-PROJECT")) return null;
+    
     try {
         const user = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser : null;
         if (!user) return null;
