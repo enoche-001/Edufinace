@@ -26,11 +26,7 @@ async function geminiRequest(summaryData, timeoutMs) {
         });
         if (response.status === 429) throw { code: 'busy' };
         if (response.status === 413) throw { code: 'toolarge' };
-        if (!response.ok) {
-            let detail = '';
-            try { const j = await response.json(); detail = String((j && (j.detail || j.error)) || '').slice(0, 160); } catch (e) { /* no body */ }
-            throw { code: 'http', status: response.status, detail: detail };
-        }
+        if (!response.ok) throw { code: 'http', status: response.status };
         const data = await response.json();
         if (!data || typeof data.advice !== 'string' || !data.advice.trim()) throw { code: 'empty' };
         return data.advice;
@@ -55,7 +51,7 @@ async function getGeminiFinancialAdvice(summaryData) {
 
 /* ---------- Insights AI helpers ---------- */
 // The backend limits the whole summaryData to 8000 characters. Keep instructions short and data small.
-const EDU_AI_MAX_CHARS = 7400;
+const EDU_AI_MAX_CHARS = 6000;
 const EDU_AI_LEVELS = {
     beginner: 'Simple words, short sentences, no jargon.',
     intermediate: 'Concise and practical; use percentages and comparisons where helpful.',
@@ -117,12 +113,12 @@ window.EduAI = {
 
     // Chat. Throws { code } so the chat can show a proper message.
     async chat(message, history, context, level) {
-        const payload = eduAiBase(level, 'chat_answer', 'Answer the reader\'s "question" directly in under 100 words using "data" and the earlier "conversation". Use short lines starting with "- " for lists and **bold** for key figures. Do not give a generic monthly review.');
+        const payload = eduAiBase(level, 'chat_answer', 'Answer the reader\'s "question" directly in under 70 words using "data" and the earlier "conversation". Put each list item on its own new line starting with "- ", and use **bold** for key figures. Do not give a generic monthly review.');
         payload.conversation = (history || []).slice(-4).map(h => ({ role: h.role, text: String(h.text || '').slice(0, 180) }));
         payload.question = String(message || '').slice(0, 300);
         const d = JSON.parse(JSON.stringify(context || {}));
         if (Array.isArray(d.recentTransactions)) {
-            d.recentTransactions = d.recentTransactions.slice(0, 30).map(t => [t.date, t.type === 'income' ? '+' : '-', t.amount, t.category, String(t.description || '').slice(0, 22)].join('|'));
+            d.recentTransactions = d.recentTransactions.slice(0, 20).map(t => [t.date, t.type === 'income' ? '+' : '-', t.amount, t.category, String(t.description || '').slice(0, 22)].join('|'));
             d.recentTransactionsFormat = 'date|sign|amount|category|description';
         }
         payload.data = d;

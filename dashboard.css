@@ -781,3 +781,7 @@ body.app:not(.is-guest):not(.is-user) [data-auth] { visibility: hidden; }
     .sheet-chat { height: min(640px, 84vh); width: min(520px, calc(100vw - 48px)); }
 }
 @media (prefers-reduced-motion: reduce) { .ai-dots i, .ai-hero.loading .ai-headline { animation: none; } }
+
+.ai-msg.ai-in { animation: aiIn 0.22s ease-out; }
+@keyframes aiIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .ai-msg.ai-in { animation: none; } }

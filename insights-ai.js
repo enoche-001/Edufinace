@@ -267,7 +267,11 @@
 
     function formatText(raw) {
         const inline = (s) => s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-        const lines = esc(raw).split('\n');
+        let text = String(raw);
+        if (text.indexOf('\n') === -1 && (text.match(/(^|[.!?:])\s+[-\u2022]\s+(?=\S)/g) || []).length >= 2) {
+            text = text.replace(/\s+[-\u2022]\s+(?=\S)/g, '\n- ');
+        }
+        const lines = esc(text).split('\n');
         let out = '', inList = false;
         lines.forEach(line => {
             const m = /^\s*(?:[-*\u2022]|\d+[.)])\s+(.*)$/.exec(line);
@@ -304,6 +308,7 @@
         });
         if (typing) html += '<div class="ai-msg ai"><span class="ai-av"><i class="fa-solid fa-wand-magic-sparkles"></i></span><div class="ai-bubble"><span class="ai-dots" aria-label="AI is typing"><i></i><i></i><i></i></span></div></div>';
         box.innerHTML = html;
+        if (!typing && thread.length && thread[thread.length - 1].role === 'ai') { const last = box.querySelector('.ai-msg.ai:last-child'); if (last) last.classList.add('ai-in'); }
         box.scrollTop = box.scrollHeight;
     }
 
@@ -317,11 +322,10 @@
     function errorMessage(e) {
         const code = e && e.code;
         if (code === 'busy') return 'I am getting a lot of questions right now. Give it a moment and try again.';
-        if (code === 'toolarge') return 'That was too much data to send at once. Try a shorter question.';
         if (code === 'timeout') return 'That took too long. Please try again.';
-        if (code === 'network') return 'I could not reach the AI. Check your connection and try again.';
-        if (code === 'backend' || code === 'empty') return 'The AI did not send back an answer. Please try again.';
-        return 'The AI is not available right now' + (e && e.status ? ' (error ' + e.status + (e.detail ? ': ' + e.detail : '') + ')' : '') + '. Please try again in a bit.';
+        if (code === 'network') return 'I could not connect. Check your internet and try again.';
+        if (code === 'toolarge') return 'That needs too much data at once. Try a shorter question.';
+        return 'I could not answer that just now. Please try again.';
     }
 
     function setBusy(b) {
