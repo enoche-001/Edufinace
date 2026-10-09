@@ -364,6 +364,20 @@
 
         <!-- ================= INSIGHTS ================= -->
         <section id="intelligence-tab" class="tab-content">
+            <!-- AI card: the only place AI shows in the app -->
+            <div class="ai-hero" id="aiHero">
+                <div class="ai-hero-top">
+                    <span class="ai-badge"><i class="fa-solid fa-wand-magic-sparkles"></i> AI insights</span>
+                    <button type="button" class="ai-level" id="aiLevelBtn" hidden></button>
+                </div>
+                <p class="ai-headline" id="aiHeadline"></p>
+                <p class="ai-sub" id="aiSub"></p>
+                <div class="ai-chips" id="aiHeroChips" hidden></div>
+                <div class="ai-hero-actions">
+                    <button type="button" class="btn btn-primary" id="aiOpenChat"></button>
+                    <button type="button" class="link-btn" id="aiTurnOff" hidden>Turn off</button>
+                </div>
+            </div>
             <div class="tile-group">
                 <h2>Right now</h2>
                 <div class="tile-grid">
@@ -738,6 +752,24 @@
     <div class="sheet-body" id="panelSheetBody"></div>
 </div>
 
+<!-- Insights: AI chat -->
+<div class="sheet sheet-chat" id="aiChatSheet" role="dialog" aria-labelledby="aiChatTitle">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title-row">
+        <h3 id="aiChatTitle"><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--brand)"></i> Ask AI</h3>
+        <span class="ai-title-actions">
+            <button type="button" class="sheet-close" id="aiClear" aria-label="Clear chat"><i class="fa-regular fa-trash-can"></i></button>
+            <button type="button" class="sheet-close" data-close-sheet aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+        </span>
+    </div>
+    <div class="ai-thread" id="aiThread" aria-live="polite"></div>
+    <div class="ai-chips" id="aiChips"></div>
+    <form class="ai-composer" id="aiComposer" autocomplete="off">
+        <textarea id="aiInput" rows="1" maxlength="500" placeholder="Ask about your money" aria-label="Message"></textarea>
+        <button type="submit" class="ai-send" id="aiSend" aria-label="Send"><i class="fa-solid fa-arrow-up"></i></button>
+    </form>
+</div>
+
 <!-- Demo: sign-up prompt -->
 <div class="sheet" id="authSheet" role="dialog" aria-label="Create an account">
     <div class="sheet-handle"></div>
@@ -761,6 +793,7 @@
 <script src="currency.js"></script>
 <script src="geminiapi.js"></script>
 <script src="intelligence.js"></script>
+<script src="insights-ai.js"></script>
 <script src="onboarding.js"></script>
 <script src="app.js"></script>
 <script src="mobile-nav.js"></script>

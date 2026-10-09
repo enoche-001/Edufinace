@@ -577,6 +577,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const res = analyzer.canIAffordThis(amt);
                 const box = document.getElementById('affordResultBox');
                 if (box) box.innerHTML = callout(res.canAfford ? 'pos' : 'neg', res.canAfford ? 'You can afford it' : 'Think twice', res.advice, 'Balance after: ' + analyzer.formatCurrency(res.projectedBalanceWithPurchase));
+                if (window.EduInsightsAI) window.EduInsightsAI.refine('afford', res, (text) => {
+                    if (box) box.innerHTML = callout(res.canAfford ? 'pos' : 'neg', res.canAfford ? 'You can afford it' : 'Think twice', text, 'Balance after: ' + analyzer.formatCurrency(res.projectedBalanceWithPurchase));
+                });
             });
         }
 
@@ -588,6 +591,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const sim = new FinancialAnalyzer(state).simulateWhatIf(type, val);
                 const box = document.getElementById('simulatorResultBox');
                 if (box) box.innerHTML = callout('brand', '', sim.message);
+                if (window.EduInsightsAI) window.EduInsightsAI.refine('whatif', { scenario: type, value: val, result: sim }, (text) => {
+                    if (box) box.innerHTML = callout('brand', '', text);
+                });
             });
         }
 
@@ -1365,16 +1371,18 @@ document.addEventListener('DOMContentLoaded', () => {
         openPanelEl = panel;
         window.EduUI.open(panelSheet);
         panelBody.scrollTop = 0;
+        if (window.EduInsightsAI) window.EduInsightsAI.onPanel(key);
         if (key === 'review') loadAiReview();
     }
     window.EduUI.onClose((except) => { if (except !== panelSheet) returnPanel(); });
 
     function loadAiReview() {
         if (!currentUser || typeof getGeminiFinancialAdvice !== 'function') return;
+        if (window.EduInsightsAI && window.EduInsightsAI.enabled()) return; // AI insights already wrote this sentence
         const autopsy = new FinancialAnalyzer(state).generateMonthlyAutopsy();
         const key = JSON.stringify(autopsy);
         if (aiCache[key]) return;
-        getGeminiFinancialAdvice(autopsy).then(advice => {
+        getGeminiFinancialAdvice(autopsy, window.EduInsightsAI ? window.EduInsightsAI.level() : undefined).then(advice => {
             if (!advice) return;
             aiCache[key] = advice;
             const el = document.getElementById('aiAutopsyText');
@@ -1514,6 +1522,8 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="callout brand" id="aiAutopsyText">${escapeHtml(aiCache[key] || autopsy.summary)}</div>`);
         setSub('review', autopsy.biggestLeak && autopsy.biggestLeak !== 'None' ? 'Top leak: ' + autopsy.biggestLeak : 'This month');
+
+        if (window.EduInsightsAI) window.EduInsightsAI.onRender();
     }
 
     // ---------- Small UI behaviours ----------
@@ -1582,6 +1592,15 @@ document.addEventListener('DOMContentLoaded', () => {
     window.confirmRecurring = function(desc, cat, amount) {
         showToast(`Confirmed: ${desc} (${formatCurrency(amount)})`, 'success');
     };
+
+    if (window.EduInsightsAI) {
+        window.EduInsightsAI.init({
+            getState: () => state,
+            uid: () => currentUser ? currentUser.uid : null,
+            toast: showToast,
+            rerender: renderIntelligenceTab
+        });
+    }
 
     init();
 });

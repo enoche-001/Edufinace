@@ -490,4 +490,136 @@ class FinancialAnalyzer {
             summary: `Monthly Review: Total spent ${this.formatCurrency(speedometer.monthlySpent)} out of ${this.formatCurrency(speedometer.availableMoney)}. Projected month-end balance: ${this.formatCurrency(pred.projectedEndMonthBalance)}.`
         };
     }
+
+    // 16. USER LEVEL (decides how simple or detailed the AI sentences are)
+    detectLevel() {
+        const txs = this.getTransactions().filter(t => !t.isOpeningBalance);
+        const months = new Set(txs.map(t => String(t.date || '').substring(0, 7)).filter(Boolean)).size;
+        const budgets = Object.keys(this.getBudgets()).length;
+        const goals = this.getSavingsGoals().length;
+        let score = 0;
+        if (txs.length >= 20) score++;
+        if (txs.length >= 80) score++;
+        if (months >= 2) score++;
+        if (months >= 4) score++;
+        if (budgets > 0) score++;
+        if (goals > 0) score++;
+        const level = score <= 2 ? 'beginner' : score <= 4 ? 'intermediate' : 'advanced';
+        return { level, score, months, transactions: txs.length };
+    }
+
+    // 17. FACTS FOR THE AI
+    // Every number here is calculated in the app, so the AI explains exact figures instead of guessing them.
+    buildAIContext(opts) {
+        opts = opts || {};
+        const maxTx = opts.maxTransactions || 60;
+        const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+        const now = new Date();
+        const monthKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+        const txs = this.getTransactions().filter(t => t && t.date);
+
+        const thisMonth = { income: 0, expense: 0, byCategory: {} };
+        txs.forEach(t => {
+            if (String(t.date).substring(0, 7) !== monthKey) return;
+            if (t.type === 'income' && !t.isOpeningBalance) thisMonth.income += t.amount;
+            if (t.type === 'expense') {
+                thisMonth.expense += t.amount;
+                thisMonth.byCategory[t.category] = (thisMonth.byCategory[t.category] || 0) + t.amount;
+            }
+        });
+
+        const budgets = Object.entries(this.getBudgets()).map(([category, limit]) => ({
+            category,
+            limit: r2(limit),
+            spentThisMonth: r2(thisMonth.byCategory[category] || 0),
+            usedPct: limit > 0 ? Math.round(((thisMonth.byCategory[category] || 0) / limit) * 100) : null
+        }));
+
+        const goals = this.getSavingsGoals().map(g => ({
+            name: g.name,
+            target: r2(g.target),
+            saved: r2(g.current),
+            remaining: r2(Math.max((g.target || 0) - (g.current || 0), 0)),
+            deadline: (g.date && g.date !== 'No deadline') ? g.date : null
+        }));
+
+        const history = this.getTimeMachinePeriods().slice(0, 6).map(p => ({
+            month: p.period,
+            income: r2(p.income),
+            expense: r2(p.expense),
+            net: r2(p.net),
+            topCategories: Object.entries(p.categories).sort((a, b) => b[1] - a[1]).slice(0, 4)
+                .map(([c, v]) => ({ category: c, amount: r2(v) }))
+        }));
+
+        const recent = txs.slice().sort((a, b) => {
+            const d = String(b.date).localeCompare(String(a.date));
+            return d !== 0 ? d : String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+        }).slice(0, maxTx).map(t => ({
+            date: t.date,
+            type: t.type,
+            amount: r2(t.amount),
+            category: t.category,
+            description: String(t.description || '').slice(0, 40)
+        }));
+
+        // App activity: how the person has been using the app
+        const created = txs.map(t => t.createdAt).filter(Boolean).map(c => new Date(c)).filter(d => !isNaN(d));
+        const weekAgo = now.getTime() - 7 * 86400000;
+        const monthAgo = now.getTime() - 30 * 86400000;
+        const activeDays = new Set(created.filter(d => d.getTime() >= monthAgo).map(d => d.toISOString().substring(0, 10)));
+        const lastLogged = created.length ? new Date(Math.max.apply(null, created.map(d => d.getTime()))).toISOString() : null;
+
+        const pace = this.calculateSpendingSpeedometer();
+        const pred = this.predictFutureBalance();
+        const leaks = this.detectSpendingLeaks();
+        const unusual = this.detectUnusualPurchases();
+        const why = this.explainSpendingIncrease();
+        const profile = this.calculateBehaviorProfile();
+        const lvl = this.detectLevel();
+
+        return {
+            today: now.toISOString().substring(0, 10),
+            currency: this.getProfile().currency || 'USD',
+            levelSignals: { months: lvl.months, transactions: lvl.transactions },
+            balanceNow: r2(pred.currentBalance),
+            thisMonth: {
+                income: r2(thisMonth.income),
+                expense: r2(thisMonth.expense),
+                expectedMonthlyIncome: r2(this.getProfile().monthlyIncomeEstimate || 0),
+                byCategory: Object.entries(thisMonth.byCategory).sort((a, b) => b[1] - a[1]).map(([c, v]) => ({ category: c, amount: r2(v) }))
+            },
+            pace: {
+                monthPassedPct: pace.monthElapsedPct,
+                moneySpentPct: pace.moneySpentPct,
+                status: pace.statusType,
+                moneyAvailable: r2(pace.availableMoney)
+            },
+            forecast: {
+                projectedMonthEndBalance: r2(pred.projectedEndMonthBalance),
+                dailySpending: r2(pred.dailyBurnRate),
+                daysLeftInMonth: pred.daysRemaining,
+                safetyBuffer: r2(this.state.projection && this.state.projection.safety != null ? this.state.projection.safety : 200)
+            },
+            biggestSpendingCategory: leaks.hasData && leaks.biggestCategory ? { name: leaks.biggestCategory.name, total: r2(leaks.biggestCategory.total), count: leaks.biggestCategory.count } : null,
+            smallPurchases: leaks.hasData ? { count: leaks.smallPurchases.count, total: r2(leaks.smallPurchases.total) } : null,
+            unusualPurchases: (unusual.unusual || []).slice(0, 5).map(u => ({ description: u.description, amount: r2(u.amount), category: u.category, date: u.date, categoryAverage: u.averageForCategory })),
+            recurringExpenses: this.discoverRecurringExpenses().slice(0, 8).map(r => ({ description: r.description, category: r.category, amount: r2(r.amount), times: r.occurrences })),
+            changeVsLastMonth: why.hasComparison ? { currentMonth: why.currentPeriod, previousMonth: why.previousPeriod, change: r2(why.expenseDiff), changePct: why.percentChange } : null,
+            spendingStyle: profile.profileTitle,
+            budgets,
+            goals,
+            goalRisks: this.detectGoalCollisions().map(c => ({ goal: c.goalName, remainingNeeded: r2(c.remainingNeeded) })),
+            monthlyHistory: history,
+            recentTransactions: recent,
+            appActivity: {
+                totalTransactionsLogged: txs.length,
+                loggedLast7Days: created.filter(d => d.getTime() >= weekAgo).length,
+                activeDaysLast30: activeDays.size,
+                lastLoggedAt: lastLogged,
+                budgetsSet: budgets.length,
+                goalsSet: goals.length
+            }
+        };
+    }
 }
