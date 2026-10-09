@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
             snapshot.forEach(docSnap => {
                 state.transactions.push({ id: docSnap.id, ...docSnap.data() });
             });
-            state.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+            state.transactions.sort(cmpDateThenRecorded);
             dataLoaded.transactions = true;
             renderAll();
         }, error => {
@@ -264,6 +264,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const profileDocRef = db.collection('users').doc(uid).collection('settings').doc('profile');
         unsubProfile = profileDocRef.onSnapshot(docSnap => {
             if (docSnap.exists) {
+                // Email sign-ups must confirm their address before using the app
+                if (docSnap.data().requireEmailVerification && currentUser && !currentUser.emailVerified) {
+                    window.location.replace('login.html#verify');
+                    return;
+                }
                 state.profile = { ...state.profile, ...docSnap.data() };
                 // One-time backfill so the admin dashboard can show email + join date for older accounts
                 const pd = docSnap.data();
@@ -388,6 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setupEventListeners() {
         themeToggleBtn.addEventListener('click', toggleTheme);
+        setupTxDetail();
 
         menuItems.forEach(item => {
             item.addEventListener('click', (e) => {
@@ -412,7 +418,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 description: document.getElementById('transDesc').value.trim(),
                 category: transCategorySelect.value,
                 note: document.getElementById('transNote').value.trim(),
-                date: transDateInput.value
+                date: transDateInput.value,
+                createdAt: new Date().toISOString()
             };
 
             if (currentUser) {
@@ -420,6 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 newTrans.id = 'tx_' + Date.now();
                 state.transactions.unshift(newTrans);
+                state.transactions.sort(cmpDateThenRecorded);
                 renderAll();
             }
             quickAddForm.reset();
@@ -776,6 +784,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 category: 'Other Income',
                 note: 'Added during first-time setup',
                 date: localDateString(),
+                createdAt: new Date().toISOString(),
                 isOpeningBalance: true
             });
         }
@@ -890,8 +899,110 @@ document.addEventListener('DOMContentLoaded', () => {
             <td>${formatShortDate(t.date)}</td>
             ${withType ? `<td>${inc ? 'Income' : 'Expense'}</td>` : ''}
             <td class="amt ${inc ? 'text-pos' : 'text-neg'}">${inc ? '+' : '\u2212'}${formatCurrency(t.amount)}</td>
-            <td class="act"><button type="button" class="row-btn" aria-label="Delete transaction" onclick="window.deleteTransaction('${escapeHtml(String(t.id))}')"><i class="fa-solid fa-trash-can"></i></button></td>
+            <td class="act"><button type="button" class="row-btn" aria-label="Delete transaction" onclick="event.stopPropagation(); window.deleteTransaction('${escapeHtml(String(t.id))}')"><i class="fa-solid fa-trash-can"></i></button></td>
         `;
+    }
+
+    function txRowEl(t, withType) {
+        const tr = document.createElement('tr');
+        tr.className = 'tx-row';
+        tr.dataset.id = String(t.id);
+        tr.tabIndex = 0;
+        tr.setAttribute('role', 'button');
+        tr.setAttribute('aria-label', 'View details for ' + (t.description || 'transaction'));
+        tr.innerHTML = txRowHtml(t, withType);
+        return tr;
+    }
+
+    // ---- Ordering: time of recording, not just the date ----
+    // Legacy records have no createdAt, so they fall back to the start of their date.
+    function recordedMs(t) {
+        if (t.createdAt) {
+            const ms = Date.parse(t.createdAt);
+            if (!isNaN(ms)) return ms;
+        }
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t.date || '');
+        return m ? new Date(+m[1], +m[2] - 1, +m[3]).getTime() : 0;
+    }
+    // Newest recorded first (used by "Recent transactions")
+    function cmpRecordedDesc(a, b) {
+        return recordedMs(b) - recordedMs(a);
+    }
+    // Newest transaction date first; entries on the same day ordered by when they were recorded
+    function cmpDateThenRecorded(a, b) {
+        const d = (b.date || '').localeCompare(a.date || '');
+        return d || cmpRecordedDesc(a, b);
+    }
+
+    // ---- Transaction detail card ----
+    function longDate(iso) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+        if (!m) return iso || '\u2014';
+        return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    function openTxDetail(id) {
+        const modal = document.getElementById('txDetailModal');
+        const t = state.transactions.find(x => String(x.id) === String(id));
+        if (!modal || !t) return;
+        const inc = t.type === 'income';
+        const set = (k, v) => { const el = document.getElementById(k); if (el) el.textContent = v; };
+
+        const amtEl = document.getElementById('txDetailAmount');
+        amtEl.textContent = (inc ? '+' : '\u2212') + formatCurrency(t.amount);
+        amtEl.className = 'tx-detail-amount ' + (inc ? 'text-pos' : 'text-neg');
+        set('txDetailTitle', t.description || 'Transaction');
+        const catEl = document.getElementById('txDetailCategory');
+        catEl.textContent = t.category || '\u2014';
+        catEl.className = 'badge ' + (inc ? 'badge-income' : 'badge-expense');
+        set('txDetailType', inc ? 'Income' : 'Expense');
+        set('txDetailDate', longDate(t.date));
+
+        const ms = t.createdAt ? Date.parse(t.createdAt) : NaN;
+        set('txDetailTime', isNaN(ms) ? 'Not recorded' : new Date(ms).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }));
+        set('txDetailRecorded', isNaN(ms) ? 'Added before time tracking' :
+            new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) + ', ' +
+            new Date(ms).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }));
+
+        const noteRow = document.getElementById('txDetailNoteRow');
+        if (noteRow) noteRow.hidden = !t.note;
+        set('txDetailNote', t.note || '');
+        const openRow = document.getElementById('txDetailOpeningRow');
+        if (openRow) openRow.hidden = !t.isOpeningBalance;
+
+        const delBtn = document.getElementById('txDetailDelete');
+        if (delBtn) delBtn.onclick = () => { closeTxDetail(); window.deleteTransaction(String(t.id)); };
+        modal.classList.add('show');
+    }
+
+    function closeTxDetail() {
+        const modal = document.getElementById('txDetailModal');
+        if (modal) modal.classList.remove('show');
+    }
+
+    function setupTxDetail() {
+        const open = (e) => {
+            const tr = e.target.closest && e.target.closest('tr.tx-row');
+            if (!tr || e.target.closest('.row-btn')) return;
+            openTxDetail(tr.dataset.id);
+        };
+        [dashboardTransactionsTable, allTransactionsTable].forEach(tb => {
+            if (!tb) return;
+            tb.addEventListener('click', open);
+            tb.addEventListener('keydown', (e) => {
+                if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('tr.tx-row')) {
+                    e.preventDefault();
+                    open(e);
+                }
+            });
+        });
+        const modal = document.getElementById('txDetailModal');
+        const closeBtn = document.getElementById('txDetailClose');
+        const doneBtn = document.getElementById('txDetailDone');
+        if (closeBtn) closeBtn.addEventListener('click', closeTxDetail);
+        if (doneBtn) doneBtn.addEventListener('click', closeTxDetail);
+        if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeTxDetail(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeTxDetail(); });
     }
 
     function emptyRow(cols, text) {
@@ -901,16 +1012,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderDashboardTransactions() {
         if (!dashboardTransactionsTable) return;
         dashboardTransactionsTable.innerHTML = '';
-        const recent = state.transactions.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 5);
+        const recent = state.transactions.slice().sort(cmpRecordedDesc).slice(0, 5);
         if (recent.length === 0) {
             dashboardTransactionsTable.innerHTML = emptyRow(5, 'No transactions yet');
             return;
         }
-        recent.forEach(t => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = txRowHtml(t, false);
-            dashboardTransactionsTable.appendChild(tr);
-        });
+        recent.forEach(t => dashboardTransactionsTable.appendChild(txRowEl(t, false)));
     }
 
     function meterClass(pct) {
@@ -995,20 +1102,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const filtered = getFilteredTransactions();
         const sort = sortTransSelect ? sortTransSelect.value : 'date-desc';
         filtered.sort((a, b) => {
-            if (sort === 'date-asc') return (a.date || '').localeCompare(b.date || '');
-            if (sort === 'amount-desc') return b.amount - a.amount;
-            if (sort === 'amount-asc') return a.amount - b.amount;
-            return (b.date || '').localeCompare(a.date || '');
+            if (sort === 'date-asc') return -cmpDateThenRecorded(a, b);
+            if (sort === 'amount-desc') return b.amount - a.amount || cmpDateThenRecorded(a, b);
+            if (sort === 'amount-asc') return a.amount - b.amount || cmpDateThenRecorded(a, b);
+            return cmpDateThenRecorded(a, b);
         });
 
         if (filtered.length === 0) {
             allTransactionsTable.innerHTML = emptyRow(6, hasActiveFilters() ? 'Nothing matches these filters' : 'No transactions yet');
         } else {
-            filtered.forEach(t => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = txRowHtml(t, true);
-                allTransactionsTable.appendChild(tr);
-            });
+            filtered.forEach(t => allTransactionsTable.appendChild(txRowEl(t, true)));
         }
         if (paginationInfo) paginationInfo.textContent = `${filtered.length} ${filtered.length === 1 ? 'transaction' : 'transactions'}`;
         const toggle = document.getElementById('filterToggle');

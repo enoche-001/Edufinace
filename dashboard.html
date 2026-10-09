@@ -531,6 +531,33 @@
     </div>
 </div>
 
+<!-- Transaction details -->
+<div class="modal-backdrop" id="txDetailModal">
+    <div class="modal tx-detail" role="dialog" aria-modal="true" aria-labelledby="txDetailTitle">
+        <div class="modal-header">
+            <h3>Transaction details</h3>
+            <button type="button" class="close-modal-btn" id="txDetailClose" aria-label="Close">&times;</button>
+        </div>
+        <div class="tx-detail-hero">
+            <div class="tx-detail-amount" id="txDetailAmount"></div>
+            <div class="tx-detail-name" id="txDetailTitle"></div>
+            <span class="badge" id="txDetailCategory"></span>
+        </div>
+        <dl class="tx-detail-list">
+            <div><dt>Type</dt><dd id="txDetailType"></dd></div>
+            <div><dt>Date</dt><dd id="txDetailDate"></dd></div>
+            <div><dt>Time recorded</dt><dd id="txDetailTime"></dd></div>
+            <div><dt>Logged on</dt><dd id="txDetailRecorded"></dd></div>
+            <div id="txDetailNoteRow" hidden><dt>Note</dt><dd id="txDetailNote"></dd></div>
+            <div id="txDetailOpeningRow" hidden><dt>Source</dt><dd>Starting balance from setup</dd></div>
+        </dl>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-ghost tx-detail-del" id="txDetailDelete"><i class="fa-solid fa-trash-can"></i> Delete</button>
+            <button type="button" class="btn btn-primary" id="txDetailDone">Done</button>
+        </div>
+    </div>
+</div>
+
 <!-- Confirm -->
 <div class="modal-backdrop" id="confirmModal">
     <div class="modal">

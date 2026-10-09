@@ -320,6 +320,19 @@ body.app[data-theme="dark"] .hero { background: linear-gradient(150deg, #4337e0 
 .table .act { width: 44px; text-align: center; padding-left: 4px; padding-right: 8px; }
 .row-btn { width: 32px; height: 32px; border-radius: 9px; border: 0; background: none; color: var(--muted); font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; }
 .row-btn:hover { background: var(--neg-soft); color: var(--neg); }
+.table tbody tr.tx-row { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.table tbody tr.tx-row:hover td, .table tbody tr.tx-row:active td { background: var(--surface-2); }
+.table tbody tr.tx-row:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.tx-detail-hero { text-align: center; padding: 6px 0 16px; border-bottom: 1px solid var(--line); }
+.tx-detail-amount { font-size: 1.9rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.tx-detail-name { font-size: 1.02rem; font-weight: 600; margin: 4px 0 10px; word-break: break-word; }
+.tx-detail-list { margin: 4px 0 0; }
+.tx-detail-list > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.tx-detail-list > div[hidden] { display: none; }
+.tx-detail-list > div:last-child { border-bottom: 0; }
+.tx-detail-list dt { color: var(--muted); font-size: 0.82rem; flex-shrink: 0; }
+.tx-detail-list dd { margin: 0; font-size: 0.9rem; font-weight: 600; text-align: right; word-break: break-word; }
+.tx-detail .tx-detail-del { color: var(--neg); }
 .table-foot { margin-top: 10px; font-size: 0.78rem; color: var(--muted); }
 
 /* ---------- Transactions tab ---------- */

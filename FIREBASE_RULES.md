@@ -37,8 +37,12 @@ service cloud.firestore {
 
     // A user may only save data if their profile already exists with a valid dob.
     // This stops someone creating an account with the SDK and skipping the signup form.
+    // Accounts created with email + password also need a confirmed email
+    // (their profile carries requireEmailVerification: true). Older accounts and Google accounts are unaffected.
     function hasValidProfile(userId) {
-      return hasValidDob(get(/databases/$(database)/documents/users/$(userId)/settings/profile).data);
+      let p = get(/databases/$(database)/documents/users/$(userId)/settings/profile).data;
+      return hasValidDob(p)
+        && (request.auth.token.email_verified == true || !p.get('requireEmailVerification', false));
     }
 
     // Owe / Owed records: basic shape and size checks.
@@ -150,7 +154,7 @@ service cloud.firestore {
 ## What this does
 
 - A profile cannot be saved unless `dob` is a real date string and the person is 13 or older.
-- Other data (transactions, goals, budgets, planner) cannot be written until that profile exists.
+- Other data (transactions, goals, budgets, planner) cannot be written until that profile exists, and, for new email sign-ups, until the email is verified.
 - Owe / Owed records are checked for a name, a positive amount and a valid direction.
 - Users can only ever read and write their own data.
 - Admins (UIDs listed in the `admins` collection) can READ all user data for the admin dashboard, but cannot change it.

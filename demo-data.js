@@ -24,8 +24,16 @@
     }
 
     let n = 0;
-    const tx = (type, amount, description, category, date, note) =>
-        ({ id: 'demo_tx_' + (++n), type, amount, description, category, date, note: note || '' });
+    // Each demo entry gets a plausible time of day so the detail card and same-day ordering work
+    const stamp = (date, k) => {
+        const [y, m, d] = date.split('-').map(Number);
+        const t = new Date(y, m - 1, d, 7 + (k * 5) % 14, (k * 17) % 60);
+        return t > new Date() ? new Date().toISOString() : t.toISOString();
+    };
+    const tx = (type, amount, description, category, date, note) => {
+        ++n;
+        return { id: 'demo_tx_' + n, type, amount, description, category, date, note: note || '', createdAt: stamp(date, n) };
+    };
 
     const transactions = [];
     for (let m = 0; m <= 2; m++) {
@@ -51,7 +59,7 @@
     );
 
     // Newest first, like the live app
-    transactions.sort((a, b) => b.date.localeCompare(a.date));
+    transactions.sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
 
     window.EDU_DEMO = {
         currency: 'USD',

@@ -24,6 +24,11 @@ try {
 document.addEventListener('DOMContentLoaded', () => {
     const loginSection = document.getElementById('login-section');
     const signupSection = document.getElementById('signup-section');
+    const verifySection = document.getElementById('verify-section');
+    const verifyEmailEl = document.getElementById('verifyEmail');
+    const verifyDoneBtn = document.getElementById('verifyDoneBtn');
+    const resendBtn = document.getElementById('resendBtn');
+    const verifyBackBtn = document.getElementById('verifyBackBtn');
     const showSignupBtn = document.getElementById('showSignupBtn');
     const showLoginBtn = document.getElementById('showLoginBtn');
 
@@ -67,11 +72,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (googleCurrencyEl) EduCurrency.populateSelect(googleCurrencyEl, detectedCurrency);
 
     // View Toggles
+    function showSection(name) {
+        if (loginSection) loginSection.classList.toggle('hidden', name !== 'login');
+        if (signupSection) signupSection.classList.toggle('hidden', name !== 'signup');
+        if (verifySection) verifySection.classList.toggle('hidden', name !== 'verify');
+        if (name !== 'verify') stopVerifyPolling();
+    }
+
     if (showSignupBtn) {
         showSignupBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            if (loginSection) loginSection.classList.add('hidden');
-            if (signupSection) signupSection.classList.remove('hidden');
+            showSection('signup');
             goToStep(1);
         });
     }
@@ -79,8 +90,149 @@ document.addEventListener('DOMContentLoaded', () => {
     if (showLoginBtn) {
         showLoginBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            if (signupSection) signupSection.classList.add('hidden');
-            if (loginSection) loginSection.classList.remove('hidden');
+            showSection('login');
+        });
+    }
+
+    // ---------- Email verification ----------
+    let verifyPoll = null;
+    let resendTimer = null;
+
+    function goToDashboard(msg) {
+        localStorage.setItem('edu_is_logged_in', 'true');
+        showToast(msg || 'Welcome!', 'success');
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);
+    }
+
+    function startResendCooldown(seconds) {
+        if (!resendBtn) return;
+        clearInterval(resendTimer);
+        let left = seconds;
+        resendBtn.disabled = true;
+        resendBtn.textContent = `Resend in ${left}s`;
+        resendTimer = setInterval(() => {
+            left--;
+            if (left <= 0) {
+                clearInterval(resendTimer);
+                resendBtn.disabled = false;
+                resendBtn.textContent = 'Resend email';
+            } else {
+                resendBtn.textContent = `Resend in ${left}s`;
+            }
+        }, 1000);
+    }
+
+    // Reload the user from Firebase and, once verified, refresh the token so database rules see it
+    async function checkVerified(silent) {
+        const user = auth && auth.currentUser;
+        if (!user) return false;
+        try {
+            await user.reload();
+            if (auth.currentUser && auth.currentUser.emailVerified) {
+                await auth.currentUser.getIdToken(true);
+                stopVerifyPolling();
+                goToDashboard('Email verified!');
+                return true;
+            }
+        } catch (err) {
+            console.error('Verify check error:', err);
+        }
+        if (!silent) showToast("We can't see your verification yet. Open the link in your email, then try again.", 'error');
+        return false;
+    }
+
+    function stopVerifyPolling() {
+        clearInterval(verifyPoll);
+        verifyPoll = null;
+        clearInterval(resendTimer);
+    }
+
+    function showVerifyScreen(user, cooldown) {
+        if (verifyEmailEl) verifyEmailEl.textContent = user.email || '';
+        showSection('verify');
+        startResendCooldown(cooldown || 0);
+        if (!cooldown && resendBtn) { resendBtn.disabled = false; resendBtn.textContent = 'Resend email'; }
+        clearInterval(verifyPoll);
+        verifyPoll = setInterval(() => checkVerified(true), 4000);
+    }
+
+    if (verifyDoneBtn) {
+        verifyDoneBtn.addEventListener('click', async () => {
+            verifyDoneBtn.disabled = true;
+            await checkVerified(false);
+            verifyDoneBtn.disabled = false;
+        });
+    }
+
+    if (resendBtn) {
+        resendBtn.addEventListener('click', async () => {
+            const user = auth && auth.currentUser;
+            if (!user) return;
+            resendBtn.disabled = true;
+            try {
+                await user.sendEmailVerification();
+                showToast('Verification email sent.', 'success');
+                startResendCooldown(60);
+            } catch (err) {
+                console.error('Resend error:', err);
+                showToast(friendlyError(err), 'error');
+                startResendCooldown(30);
+            }
+        });
+    }
+
+    if (verifyBackBtn) {
+        verifyBackBtn.addEventListener('click', async () => {
+            try { if (auth) await auth.signOut(); } catch (e) { /* ignore */ }
+            localStorage.removeItem('edu_is_logged_in');
+            showSection('signup');
+            goToStep(1);
+        });
+    }
+
+    // Does this account still need to confirm its email? Only email/password accounts created
+    // with verification turned on carry the flag, so older accounts are never locked out.
+    async function needsVerification(user) {
+        if (!user || user.emailVerified) return false;
+        const usesPassword = (user.providerData || []).some(p => p.providerId === 'password');
+        if (!usesPassword) return false;
+        try {
+            if (db) {
+                const snap = await db.collection('users').doc(user.uid).collection('settings').doc('profile').get();
+                return !!(snap.exists && snap.data().requireEmailVerification);
+            }
+        } catch (err) {
+            console.error('Profile check error:', err);
+        }
+        return false;
+    }
+
+    function friendlyError(err) {
+        const map = {
+            'auth/email-already-in-use': 'That email already has an account. Try logging in.',
+            'auth/invalid-email': 'Enter a valid email address.',
+            'auth/weak-password': 'Password must be at least 6 characters.',
+            'auth/user-not-found': 'Wrong email or password.',
+            'auth/wrong-password': 'Wrong email or password.',
+            'auth/invalid-credential': 'Wrong email or password.',
+            'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.',
+            'auth/network-request-failed': 'Network problem. Check your connection.',
+            'auth/popup-closed-by-user': 'Sign-in was cancelled.',
+            'auth/cancelled-popup-request': 'Sign-in was cancelled.'
+        };
+        return (err && map[err.code]) || (err && err.message) || 'Something went wrong. Please try again.';
+    }
+
+    // Arrived from the dashboard (or a refresh) while still unverified
+    if (location.hash === '#verify' && auth) {
+        const unsub = auth.onAuthStateChanged(async (user) => {
+            unsub();
+            if (!user) return;
+            if (await needsVerification(user)) {
+                showVerifyScreen(user, 0);
+            } else if (user.emailVerified) {
+                goToDashboard('Welcome back!');
+            }
         });
     }
 
@@ -228,16 +380,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const email = document.getElementById('loginEmail').value.trim();
             const password = document.getElementById('loginPassword').value;
 
+            const btn = document.getElementById('loginSubmitBtn');
+            if (btn) btn.disabled = true;
             try {
-                await auth.signInWithEmailAndPassword(email, password);
-                showToast('Logged in successfully!', 'success');
-                localStorage.setItem('edu_is_logged_in', 'true');
-                setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 1000);
+                const cred = await auth.signInWithEmailAndPassword(email, password);
+                if (await needsVerification(cred.user)) {
+                    showVerifyScreen(cred.user, 0);
+                    return;
+                }
+                goToDashboard('Logged in successfully!');
             } catch (err) {
                 console.error("Login error:", err);
-                showToast(err.message, 'error');
+                showToast(friendlyError(err), 'error');
+            } finally {
+                if (btn) btn.disabled = false;
             }
         });
     }
@@ -246,6 +402,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (signupForm) {
         signupForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            // Pressing Enter on an earlier step should move forward, not submit
+            if (!paneStep3.classList.contains('active')) {
+                if (paneStep1.classList.contains('active') && nextToStep2) nextToStep2.click();
+                else if (paneStep2.classList.contains('active') && nextToStep3) nextToStep3.click();
+                return;
+            }
             const email = document.getElementById('signupEmail').value.trim();
             const password = document.getElementById('signupPassword').value;
             const firstName = document.getElementById('signupFirstName').value.trim();
@@ -254,6 +416,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const dob = document.getElementById('signupDob').value;
             const currency = EduCurrency.toCode(signupCurrencyEl ? signupCurrencyEl.value : 'USD');
 
+            const submitBtn = document.getElementById('signupSubmitBtn');
+            if (submitBtn) submitBtn.disabled = true;
             try {
                 const userCred = await auth.createUserWithEmailAndPassword(email, password);
                 const user = userCred.user;
@@ -271,18 +435,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         currency,
                         email,
                         createdAt: new Date().toISOString(),
-                        avatar: 'fa-user-graduate'
+                        avatar: 'fa-user-graduate',
+                        requireEmailVerification: true
                     });
                 }
 
-                showToast('Account created successfully!', 'success');
-                localStorage.setItem('edu_is_logged_in', 'true');
-                setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 1000);
+                let sent = true;
+                try { await user.sendEmailVerification(); } catch (mailErr) { sent = false; console.error('Verification email error:', mailErr); }
+                showToast(sent ? 'Account created. Check your email to verify it.' : 'Account created. Tap Resend to get your verification email.', sent ? 'success' : 'error');
+                showVerifyScreen(user, sent ? 60 : 0);
             } catch (err) {
                 console.error("Signup error:", err);
-                showToast(err.message, 'error');
+                showToast(friendlyError(err), 'error');
+            } finally {
+                if (submitBtn) submitBtn.disabled = false;
             }
         });
     }
@@ -297,6 +463,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const snap = await profileRef.get();
                 if (!snap.exists) {
                     pendingGoogleUser = user;
+                    // Name comes straight from the Google account, so they don't retype it
+                    const gp = (res.additionalUserInfo && res.additionalUserInfo.profile) || {};
+                    const parts = (user.displayName || '').trim().split(/\s+/).filter(Boolean);
+                    const first = gp.given_name || parts[0] || '';
+                    const last = gp.family_name || parts.slice(1).join(' ');
+                    document.getElementById('googleFirstName').value = first;
+                    document.getElementById('googleLastName').value = last;
                     if (googleInfoModal) googleInfoModal.classList.add('show');
                     return;
                 }
@@ -308,7 +481,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 1000);
         } catch (err) {
             console.error("Google auth error:", err);
-            showToast(err.message, 'error');
+            showToast(friendlyError(err), 'error');
         }
     };
 
