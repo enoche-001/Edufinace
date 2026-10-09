@@ -26,7 +26,11 @@ async function geminiRequest(summaryData, timeoutMs) {
         });
         if (response.status === 429) throw { code: 'busy' };
         if (response.status === 413) throw { code: 'toolarge' };
-        if (!response.ok) throw { code: 'http', status: response.status };
+        if (!response.ok) {
+            let detail = '';
+            try { const j = await response.json(); detail = String((j && (j.detail || j.error)) || '').slice(0, 160); } catch (e) { /* no body */ }
+            throw { code: 'http', status: response.status, detail: detail };
+        }
         const data = await response.json();
         if (!data || typeof data.advice !== 'string' || !data.advice.trim()) throw { code: 'empty' };
         return data.advice;

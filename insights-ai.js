@@ -321,7 +321,7 @@
         if (code === 'timeout') return 'That took too long. Please try again.';
         if (code === 'network') return 'I could not reach the AI. Check your connection and try again.';
         if (code === 'backend' || code === 'empty') return 'The AI did not send back an answer. Please try again.';
-        return 'The AI is not available right now' + (e && e.status ? ' (error ' + e.status + ')' : '') + '. Please try again in a bit.';
+        return 'The AI is not available right now' + (e && e.status ? ' (error ' + e.status + (e.detail ? ': ' + e.detail : '') + ')' : '') + '. Please try again in a bit.';
     }
 
     function setBusy(b) {
