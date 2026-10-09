@@ -79,6 +79,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (location.hash === '#signup' && showSignupBtn) showSignupBtn.click();
+
     function goToStep(step) {
         if (paneStep1) paneStep1.classList.remove('active');
         if (paneStep2) paneStep2.classList.remove('active');

@@ -22,7 +22,7 @@
         if (!d.due) return '';
         const today = new Date().toISOString().slice(0, 10);
         const over = d.due < today;
-        return '<span class="debt-due' + (over ? ' over' : '') + '"><i class="fa-regular fa-clock"></i> ' + (over ? 'Overdue · ' : 'Due ') + esc(d.due) + '</span>';
+        return '<span class="debt-due' + (over ? ' over' : '') + '"><i class="fa-regular fa-clock"></i> ' + (over ? 'Overdue \u00b7 ' : 'Due ') + esc(d.due) + '</span>';
     }
 
     function row(d) {
@@ -35,10 +35,10 @@
             '<div class="debt-amt">' + money(left) + '</div></div>' +
             (d.paid ? '<div class="debt-progress"><span style="width:' + pct + '%"></span></div><small class="text-muted">' + money(d.paid) + ' of ' + money(d.amount) + ' paid</small>' : '') +
             '<div class="debt-actions">' +
-            (owed ? '<a class="btn btn-small btn-success" target="_blank" rel="noopener" href="' + waLink(d) + '"><i class="fa-brands fa-whatsapp"></i> Remind</a>' : '') +
-            '<button type="button" class="btn btn-small btn-secondary-outline" data-act="part">Part payment</button>' +
-            '<button type="button" class="btn btn-small btn-primary" data-act="settle">Settled</button>' +
-            '<button type="button" class="btn btn-small btn-danger-outline" data-act="del" aria-label="Delete"><i class="fa-solid fa-trash"></i></button>' +
+            (owed ? '<a class="btn btn-sm btn-success" target="_blank" rel="noopener" href="' + waLink(d) + '"><i class="fa-brands fa-whatsapp"></i> Remind</a>' : '') +
+            '<button type="button" class="btn btn-sm btn-ghost" data-act="part">Part payment</button>' +
+            '<button type="button" class="btn btn-sm btn-primary" data-act="settle">Settled</button>' +
+            '<button type="button" class="btn btn-sm btn-danger" data-act="del" aria-label="Delete"><i class="fa-solid fa-trash"></i></button>' +
             '</div></div>';
     }
 
@@ -49,10 +49,10 @@
         $('debtOwedTotal').textContent = money(sum('owed_to_me'));
         $('debtOweTotal').textContent = money(sum('i_owe'));
         $('debtActiveList').innerHTML = active.length ? active.map(row).join('') :
-            '<p class="text-muted text-center py-3">Nothing here. Add someone who owes you, or someone you owe.</p>';
+            '<p class="empty">No records yet</p>';
         $('debtSettledList').innerHTML = done.length ? done.map(d =>
             '<div class="debt-done"><span>' + esc(d.person) + ' · ' + (d.direction === 'owed_to_me' ? 'paid you' : 'you paid') + '</span><b>' + money(d.amount) + '</b></div>').join('') :
-            '<p class="text-muted" style="padding:8px 0">No settled records yet.</p>';
+            '<p class="empty">None settled yet</p>';
         $('debtSettledCount').textContent = done.length;
     }
 
@@ -60,7 +60,15 @@
         if (unsubD) unsubD(); if (unsubP) unsubP();
         uid = u ? u.uid : null; items = [];
         window.__eduDebtsSettled = 0;
-        if (!uid) return;
+        if (!uid) {
+            // Signed-out visitors see demo records (read only)
+            if (window.EDU_DEMO) {
+                currency = window.EDU_DEMO.currency;
+                items = window.EDU_DEMO.debts.map(d => Object.assign({}, d));
+                render();
+            }
+            return;
+        }
         unsubP = db.collection('users').doc(uid).collection('settings').doc('profile').onSnapshot(s => {
             if (s.exists && s.data().currency) { currency = s.data().currency; render(); }
         }, () => {});
@@ -82,6 +90,7 @@
 
         $('debtForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (window.eduGuestGate && window.eduGuestGate('Sign up to keep your own owe / owed list.')) return;
             if (!uid) return;
             const amount = parseFloat($('debtAmount').value);
             const person = $('debtPerson').value.trim();
@@ -102,6 +111,7 @@
         $('debtActiveList').addEventListener('click', async (e) => {
             const btn = e.target.closest('[data-act]');
             if (!btn) return;
+            if (window.eduGuestGate && window.eduGuestGate('Sign up to keep your own owe / owed list.')) return;
             const id = btn.closest('.debt-item').dataset.id;
             const d = items.find(x => x.id === id);
             if (!d) return;

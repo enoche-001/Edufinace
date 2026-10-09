@@ -2,778 +2,551 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EduFinance - Dashboard & Finance Tracker</title>
-    <!-- Google Fonts: Inter -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#f4f5fa">
+    <title>EduFinance</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Font Awesome Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Custom Style Sheet -->
-    <link rel="stylesheet" href="style.css">
-    <!-- Firebase Compat SDKs -->
+    <link rel="stylesheet" href="dashboard.css">
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
-<body>
-    <div class="app-container" id="appContainer">
-        <!-- Sidebar Navigation -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <i class="fa-solid fa-graduation-cap logo-icon"></i>
-                    <span>EduFinance</span>
-                </div>
-                <button class="close-sidebar-btn" id="closeSidebar" aria-label="Close Sidebar">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+<body class="app">
+<div class="app-container" id="appContainer">
+
+    <!-- Sidebar (tablet and desktop) -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo"><i class="fa-solid fa-graduation-cap logo-icon"></i><span>EduFinance</span></div>
+        </div>
+        <nav class="sidebar-menu">
+            <a href="#" class="menu-item active" data-tab="dashboard"><i class="fa-solid fa-house"></i><span>Home</span></a>
+            <a href="#" class="menu-item" data-tab="transactions"><i class="fa-solid fa-receipt"></i><span>Transactions</span></a>
+            <a href="#" class="menu-item" data-tab="budgets"><i class="fa-solid fa-wallet"></i><span>Budgets</span></a>
+            <a href="#" class="menu-item" data-tab="savings"><i class="fa-solid fa-piggy-bank"></i><span>Savings</span></a>
+            <a href="#" class="menu-item" data-tab="debts"><i class="fa-solid fa-handshake"></i><span>Owe / Owed</span></a>
+            <a href="#" class="menu-item" data-tab="projections"><i class="fa-solid fa-calendar-check"></i><span>Semester plan</span></a>
+            <a href="#" class="menu-item" data-tab="intelligence"><i class="fa-solid fa-brain"></i><span>Insights</span></a>
+            <a href="#" class="menu-item" data-tab="profile"><i class="fa-solid fa-user-gear"></i><span>Profile</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <a class="btn btn-primary btn-full" data-auth="guest" href="login.html#signup">Create free account</a>
+            <a class="btn btn-ghost btn-full" data-auth="guest" href="login.html">Log in</a>
+            <button id="logoutBtn" data-auth="user" class="btn btn-ghost btn-full"><i class="fa-solid fa-right-from-bracket"></i> Log out</button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <!-- App bar: one avatar, placed left on phones and right on desktop -->
+        <header class="app-bar">
+            <button type="button" class="avatar avatar-btn" id="userAvatarDisplay" data-go="profile" aria-label="Open profile"><i class="fa-solid fa-user-graduate"></i></button>
+            <div class="app-bar-title">
+                <p class="subtitle" id="headerSubtitle"></p>
+                <h1 id="greetingHeading">Welcome</h1>
             </div>
-            <nav class="sidebar-menu">
-                <a href="#" class="menu-item active" data-tab="dashboard">
-                    <i class="fa-solid fa-chart-pie"></i>
-                    <span>Dashboard</span>
-                </a>
-                <a href="#" class="menu-item" data-tab="transactions">
-                    <i class="fa-solid fa-list-check"></i>
-                    <span>Transactions</span>
-                </a>
-                <a href="#" class="menu-item" data-tab="budgets">
-                    <i class="fa-solid fa-wallet"></i>
-                    <span>Budgets</span>
-                </a>
-                <a href="#" class="menu-item" data-tab="savings">
-                    <i class="fa-solid fa-piggy-bank"></i>
-                    <span>Savings Goals</span>
-                </a>
-                <a href="#" class="menu-item" data-tab="debts">
-                    <i class="fa-solid fa-handshake"></i>
-                    <span>Owe / Owed</span>
-                </a>
-                <a href="#" class="menu-item" data-tab="projections">
-                    <i class="fa-solid fa-hourglass-half"></i>
-                    <span>Semester Planner</span>
-                </a>
-                <a href="#" class="menu-item" data-tab="intelligence">
-                    <i class="fa-solid fa-brain"></i>
-                    <span>Financial Intelligence</span>
-                </a>
-                <a href="#" class="menu-item" data-tab="profile">
-                    <i class="fa-solid fa-user-gear"></i>
-                    <span>Profile & Settings</span>
-                </a>
-            </nav>
-            <div class="sidebar-footer">
-                <button id="loadDemoData" class="btn btn-secondary-outline btn-full">
-                    <i class="fa-solid fa-database"></i> Load Demo Data
-                </button>
-                <button id="logoutBtn" class="btn btn-secondary-outline btn-full">
-                    <i class="fa-solid fa-right-from-bracket"></i> Logout
-                </button>
+            <div class="app-bar-right">
+                <a class="btn btn-primary btn-sm" data-auth="guest" href="login.html#signup">Sign up</a>
+                <button type="button" class="icon-btn" id="themeToggleBtn" aria-label="Switch theme"><i class="fa-solid fa-moon"></i></button>
             </div>
-        </aside>
+            <span class="username" id="appBarUsername"></span>
+        </header>
 
-        <!-- Main Content Area -->
-        <main class="main-content">
-            <!-- Header -->
-            <header class="app-header">
-                <div class="header-left">
-                    <button class="mobile-toggle-btn" id="mobileToggle" aria-label="Open Navigation">
-                        <i class="fa-solid fa-bars"></i>
-                    </button>
-                    <div>
-                        <h1 id="greetingHeading">Welcome back, Student</h1>
-                        <p class="subtitle" id="headerSubtitle">Here is your financial overview.</p>
+        <!-- ================= HOME ================= -->
+        <section id="dashboard-tab" class="tab-content active">
+            <div class="overview">
+                <div class="hero">
+                    <div class="hero-top">
+                        <span class="hero-label">Balance</span>
+                        <span class="chip" id="balanceStatus">On track</span>
+                    </div>
+                    <div class="hero-amount" id="totalBalance">0.00</div>
+                    <div class="hero-split">
+                        <div><span><i class="fa-solid fa-arrow-down"></i> Income</span><b id="monthlyIncome">0.00</b></div>
+                        <div><span><i class="fa-solid fa-arrow-up"></i> Expenses</span><b id="monthlyExpenses">0.00</b></div>
                     </div>
                 </div>
-                <div class="header-right">
-                    <div class="theme-toggle">
-                        <button id="themeToggleBtn" aria-label="Toggle Theme">
-                            <i class="fa-solid fa-moon"></i>
-                        </button>
+                <div class="overview-side">
+                    <div class="card forecast">
+                        <span class="round-ico"><i class="fa-solid fa-hourglass-half"></i></span>
+                        <span class="forecast-text">End of term</span>
+                        <span class="forecast-value" id="termForecast">0.00</span>
                     </div>
-                    <div class="user-profile">
-                        <div class="avatar" id="userAvatarDisplay">
-                            <i class="fa-solid fa-user-graduate"></i>
-                        </div>
-                        <span class="username">Student Wallet</span>
-                    </div>
+                    <div id="streakSlot"></div>
                 </div>
-            </header>
+            </div>
 
-            <!-- Dashboard Tab Content -->
-            <section id="dashboard-tab" class="tab-content active">
-                <!-- Stat Cards -->
-                <div class="stats-grid">
-                    <div class="stat-card total-balance">
-                        <div class="stat-header">
-                            <span class="stat-label">Current Balance</span>
-                            <div class="stat-icon-wrapper bg-primary-light">
-                                <i class="fa-solid fa-scale-balanced text-primary"></i>
-                            </div>
+            <div class="home-grid">
+                <div class="home-main">
+                    <div class="card o-budgets">
+                        <div class="sec-head">
+                            <h2>Budgets</h2>
+                            <button type="button" class="link-btn nav-to-tab" data-target="budgets">See all</button>
                         </div>
-                        <div class="stat-value" id="totalBalance">0.00</div>
-                        <div class="stat-footer text-success" id="balanceStatus">
-                            <i class="fa-solid fa-circle-check"></i> Within safe spending range
-                        </div>
+                        <div id="dashboardBudgetGrid"></div>
                     </div>
 
-                    <div class="stat-card">
-                        <div class="stat-header">
-                            <span class="stat-label">Monthly Income</span>
-                            <div class="stat-icon-wrapper bg-success-light">
-                                <i class="fa-solid fa-arrow-trend-up text-success"></i>
-                            </div>
+                    <div class="card o-recent">
+                        <div class="sec-head">
+                            <h2>Recent transactions</h2>
+                            <button type="button" class="link-btn nav-to-tab" data-target="transactions">See all</button>
                         </div>
-                        <div class="stat-value" id="monthlyIncome">0.00</div>
-                        <div class="stat-footer text-muted" id="incomeSub">
-                            From jobs, grants & allowance
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-header">
-                            <span class="stat-label">Monthly Expenses</span>
-                            <div class="stat-icon-wrapper bg-danger-light">
-                                <i class="fa-solid fa-arrow-trend-down text-danger"></i>
-                            </div>
-                        </div>
-                        <div class="stat-value" id="monthlyExpenses">0.00</div>
-                        <div class="stat-footer text-muted" id="expensesSub">
-                            Rent, food, socials & school
-                        </div>
-                    </div>
-
-                    <div class="stat-card term-projection-card">
-                        <div class="stat-header">
-                            <span class="stat-label">End of Term Forecast</span>
-                            <div class="stat-icon-wrapper bg-warning-light">
-                                <i class="fa-solid fa-hourglass-half text-warning"></i>
-                            </div>
-                        </div>
-                        <div class="stat-value" id="termForecast">0.00</div>
-                        <div class="stat-footer" id="projectionStatus">
-                            <i class="fa-solid fa-circle-info"></i> Projections based on current spending
+                        <div class="table-wrap">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Description</th>
+                                        <th>Category</th>
+                                        <th>Date</th>
+                                        <th class="amt">Amount</th>
+                                        <th class="act"><span class="sr-only">Delete</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashboardTransactionsTable"></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
-                <!-- Dashboard Content Grid -->
-                <div class="dashboard-grid">
-                    <!-- Column Left: Transaction & Budget Quick Add -->
-                    <div class="dashboard-col">
-                        <div class="card">
-                            <div class="card-header">
-                                <h2>Quick Add Transaction</h2>
+                <div class="home-side">
+                    <div class="card quick-card o-quick">
+                        <div class="sec-head"><h2>Add transaction</h2></div>
+                        <form id="quickAddForm" class="form">
+                            <div class="seg" id="transTypeSeg">
+                                <button type="button" class="seg-btn is-expense active" data-type="expense">Expense</button>
+                                <button type="button" class="seg-btn is-income" data-type="income">Income</button>
                             </div>
-                            <form id="quickAddForm" class="form">
-                                <div class="form-group-row">
-                                    <div class="form-group flex-1">
-                                        <label for="transType">Type</label>
-                                        <select id="transType" class="form-control" required>
-                                            <option value="expense" selected>Expense</option>
-                                            <option value="income">Income</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group flex-1">
-                                        <label for="transAmount">Amount</label>
-                                        <input type="number" id="transAmount" class="form-control" placeholder="0.00" min="0.01" step="0.01" required>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="transDesc">Description</label>
-                                    <input type="text" id="transDesc" class="form-control" placeholder="e.g. Groceries, Part-time shift, Books" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="transCategory">Category</label>
-                                    <select id="transCategory" class="form-control" required>
-                                        <!-- Will be populated dynamically based on type -->
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="transNote">Side Note / Details <span class="text-muted">(Optional)</span></label>
-                                    <input type="text" id="transNote" class="form-control" placeholder="e.g. Calculus 101 Book, Cinema">
-                                </div>
-                                <div class="form-group">
-                                    <label for="transDate">Date</label>
-                                    <input type="date" id="transDate" class="form-control" required>
-                                </div>
-                                <button type="submit" class="btn btn-primary btn-full">
-                                    <i class="fa-solid fa-plus"></i> Add Transaction
-                                </button>
-                            </form>
-                        </div>
-
-                        <!-- Savings Goals Overview Widget -->
-                        <div class="card">
-                            <div class="card-header header-with-btn">
-                                <h2>Savings Goals</h2>
-                                <button class="btn btn-link btn-small nav-to-tab" data-target="savings">View All</button>
+                            <input type="hidden" id="transType" value="expense">
+                            <div class="form-group">
+                                <label for="transAmount" class="sr-only">Amount</label>
+                                <input type="number" id="transAmount" class="form-control amount-input" placeholder="0.00" min="0.01" step="0.01" inputmode="decimal" required>
                             </div>
-                            <div class="savings-widget-list" id="dashboardSavingsList">
-                                <!-- Populated dynamically -->
-                                <p class="text-muted text-center py-3">No active savings goals. Add one in the Savings Goals tab!</p>
+                            <div class="form-group">
+                                <label for="transDesc">Description</label>
+                                <input type="text" id="transDesc" class="form-control" placeholder="Groceries" maxlength="80" required>
                             </div>
-                        </div>
+                            <div class="form-group">
+                                <label for="transCategory">Category</label>
+                                <select id="transCategory" class="form-control" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label for="transDate">Date</label>
+                                <input type="date" id="transDate" class="form-control" required>
+                            </div>
+                            <details class="optional-fold">
+                                <summary>Add a note</summary>
+                                <input type="text" id="transNote" class="form-control" placeholder="Note" maxlength="120">
+                            </details>
+                            <button type="submit" class="btn btn-primary btn-full">Add</button>
+                        </form>
                     </div>
 
-                    <!-- Column Right: Budgets and Recent Transactions -->
-                    <div class="dashboard-col col-span-2">
-                        <!-- Budget Spending Limit Progress Cards -->
-                        <div class="card">
-                            <div class="card-header header-with-btn">
-                                <h2>Monthly Budget Limits</h2>
-                                <button class="btn btn-link btn-small nav-to-tab" data-target="budgets">Manage Budgets</button>
-                            </div>
-                            <div class="budget-progress-grid" id="dashboardBudgetGrid">
-                                <!-- Populated dynamically -->
-                            </div>
+                    <div class="card o-savings">
+                        <div class="sec-head">
+                            <h2>Savings goals</h2>
+                            <button type="button" class="link-btn nav-to-tab" data-target="savings">See all</button>
                         </div>
-
-                        <!-- Recent Transactions -->
-                        <div class="card">
-                            <div class="card-header header-with-btn">
-                                <h2>Recent Transactions</h2>
-                                <button class="btn btn-link btn-small nav-to-tab" data-target="transactions">View All</button>
-                            </div>
-                            <div class="table-container">
-                                <table class="table">
-                                    <thead>
-                                        <tr>
-                                            <th>Description</th>
-                                            <th>Category</th>
-                                            <th>Date</th>
-                                            <th class="text-right">Amount</th>
-                                            <th class="text-center">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="dashboardTransactionsTable">
-                                        <!-- Populated dynamically -->
-                                        <tr>
-                                            <td colspan="5" class="text-center text-muted py-4">No transactions found. Use the Quick Add form to add some!</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                        <div id="dashboardSavingsList"></div>
                     </div>
                 </div>
-            </section>
+            </div>
+        </section>
 
-            <!-- Transactions Tab Content -->
-            <section id="transactions-tab" class="tab-content">
-                <div class="card">
-                    <div class="card-header filters-header">
-                        <h2>All Transactions & Exports</h2>
-                        <div class="filters-container">
-                            <div class="search-input-wrapper">
-                                <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                                <input type="text" id="searchTrans" placeholder="Search description..." class="form-control">
-                            </div>
-                            <select id="filterCategory" class="form-control">
-                                <option value="all">All Categories</option>
-                            </select>
+        <!-- ================= TRANSACTIONS ================= -->
+        <section id="transactions-tab" class="tab-content">
+            <div class="card">
+                <div class="search-row">
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="search" id="searchTrans" class="form-control" placeholder="Search" aria-label="Search transactions">
+                    </div>
+                    <button type="button" class="icon-btn" id="filterToggle" aria-label="Filters"><i class="fa-solid fa-sliders"></i></button>
+                </div>
+                <div class="filter-panel" id="filterPanel">
+                    <div class="filter-grid">
+                        <div class="form-group">
+                            <label for="filterCategory">Category</label>
+                            <select id="filterCategory" class="form-control"><option value="all">All</option></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="filterType">Type</label>
                             <select id="filterType" class="form-control">
-                                <option value="all">All Types</option>
+                                <option value="all">All</option>
                                 <option value="income">Income</option>
                                 <option value="expense">Expense</option>
                             </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sortTrans">Sort</label>
                             <select id="sortTrans" class="form-control">
-                                <option value="date-desc">Newest First</option>
-                                <option value="date-asc">Oldest First</option>
-                                <option value="amount-desc">Highest Amount</option>
-                                <option value="amount-asc">Lowest Amount</option>
+                                <option value="date-desc">Newest</option>
+                                <option value="date-asc">Oldest</option>
+                                <option value="amount-desc">Highest</option>
+                                <option value="amount-asc">Lowest</option>
                             </select>
                         </div>
-                        <!-- STEP 3 & 6: Date Range Filter & Export Buttons -->
-                        <div class="export-filters-bar" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-color);">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <label style="font-size: 0.85rem; font-weight: 600;">From:</label>
-                                <input type="date" id="exportStartDate" class="form-control" style="padding: 6px 12px;">
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <label style="font-size: 0.85rem; font-weight: 600;">To:</label>
-                                <input type="date" id="exportEndDate" class="form-control" style="padding: 6px 12px;">
-                            </div>
-                            <div style="display: flex; gap: 10px; margin-left: auto;">
-                                <button type="button" id="exportCsvBtn" class="btn btn-secondary-outline btn-small">
-                                    <i class="fa-solid fa-file-csv"></i> Export CSV
-                                </button>
-                                <button type="button" id="exportPrintBtn" class="btn btn-primary btn-small">
-                                    <i class="fa-solid fa-print"></i> Print / PDF Report
-                                </button>
-                            </div>
+                        <div class="form-group">
+                            <label for="exportStartDate">From</label>
+                            <input type="date" id="exportStartDate" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="exportEndDate">To</label>
+                            <input type="date" id="exportEndDate" class="form-control">
                         </div>
                     </div>
-                    <div class="table-container">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Description</th>
-                                    <th>Category</th>
-                                    <th>Date</th>
-                                    <th>Type</th>
-                                    <th class="text-right">Amount</th>
-                                    <th class="text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="allTransactionsTable">
-                                <!-- Populated dynamically -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="pagination-info" id="paginationInfo"></div>
-                </div>
-            </section>
-
-            <!-- Budgets Tab Content -->
-            <section id="budgets-tab" class="tab-content">
-                <div class="budget-setup-grid">
-                    <div class="card">
-                        <div class="card-header">
-                            <h2>Set Category Budgets</h2>
-                        </div>
-                        <p class="card-instruction">Set maximum monthly spending targets for specific expense categories.</p>
-                        <form id="budgetForm" class="form mt-3">
-                            <div class="form-group">
-                                <label for="budgetCategory">Expense Category</label>
-                                <select id="budgetCategory" class="form-control" required></select>
-                            </div>
-                            <div class="form-group">
-                                <label for="budgetLimit">Monthly Limit</label>
-                                <input type="number" id="budgetLimit" class="form-control" placeholder="e.g. 300" min="1" step="1" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary btn-full">
-                                <i class="fa-solid fa-floppy-disk"></i> Save Budget Target
-                            </button>
-                        </form>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header">
-                            <h2>Active Monthly Budgets</h2>
-                        </div>
-                        <div class="budget-full-list" id="budgetFullList"></div>
+                    <div class="filter-actions">
+                        <button type="button" id="clearFilters" class="btn btn-ghost btn-sm">Clear</button>
+                        <button type="button" id="exportCsvBtn" class="btn btn-ghost btn-sm"><i class="fa-solid fa-file-csv"></i> CSV</button>
+                        <button type="button" id="exportPrintBtn" class="btn btn-primary btn-sm"><i class="fa-solid fa-print"></i> PDF</button>
                     </div>
                 </div>
-            </section>
-
-            <!-- Savings Goals Tab Content -->
-            <section id="savings-tab" class="tab-content">
-                <div class="savings-grid-layout">
-                    <div class="card">
-                        <div class="card-header">
-                            <h2>Create Savings Goal</h2>
-                        </div>
-                        <form id="savingsGoalForm" class="form">
-                            <div class="form-group">
-                                <label for="goalName">Goal Name</label>
-                                <input type="text" id="goalName" class="form-control" placeholder="e.g. Summer Vacation, Laptop" required>
-                            </div>
-                            <div class="form-group-row">
-                                <div class="form-group flex-1">
-                                    <label for="targetAmount">Target Amount</label>
-                                    <input type="number" id="targetAmount" class="form-control" placeholder="0.00" min="1" step="0.01" required>
-                                </div>
-                                <div class="form-group flex-1">
-                                    <label for="currentSaved">Initially Saved</label>
-                                    <input type="number" id="currentSaved" class="form-control" value="0" min="0" step="0.01">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="targetDate">Target Completion Date (Optional)</label>
-                                <input type="date" id="targetDate" class="form-control">
-                            </div>
-                            <button type="submit" class="btn btn-primary btn-full">
-                                <i class="fa-solid fa-piggy-bank"></i> Add Savings Goal
-                            </button>
-                        </form>
-                    </div>
-
-                    <div class="savings-cards-container" id="savingsCardsContainer"></div>
+                <div class="table-wrap">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Category</th>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th class="amt">Amount</th>
+                                <th class="act"><span class="sr-only">Delete</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="allTransactionsTable"></tbody>
+                    </table>
                 </div>
-            </section>
+                <p class="table-foot" id="paginationInfo"></p>
+            </div>
+        </section>
 
-            <!-- Semester Planner Tab Content -->
-            <section id="debts-tab" class="tab-content">
-                <div class="debt-summary">
-                    <div class="card debt-sum owed"><span>People owe you</span><strong id="debtOwedTotal">0</strong></div>
-                    <div class="card debt-sum owe"><span>You owe</span><strong id="debtOweTotal">0</strong></div>
+        <!-- ================= BUDGETS ================= -->
+        <section id="budgets-tab" class="tab-content">
+            <button type="button" class="btn btn-primary fold-btn" data-fold="budgetFormCard"><i class="fa-solid fa-plus"></i> Set a budget</button>
+            <div class="split">
+                <div class="card fold-target" id="budgetFormCard">
+                    <div class="sec-head"><h2>Set a budget</h2></div>
+                    <form id="budgetForm" class="form">
+                        <div class="form-group">
+                            <label for="budgetCategory">Category</label>
+                            <select id="budgetCategory" class="form-control" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="budgetLimit">Monthly limit</label>
+                            <input type="number" id="budgetLimit" class="form-control" placeholder="300" min="1" step="1" inputmode="decimal" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">Save budget</button>
+                    </form>
                 </div>
-                <div class="debts-grid">
-                    <div class="card">
-                        <div class="card-header"><h2>Add Record</h2></div>
-                        <form id="debtForm" class="form">
-                            <div class="seg" id="debtDir">
-                                <button type="button" class="seg-btn active" data-dir="owed_to_me">They owe me</button>
-                                <button type="button" class="seg-btn" data-dir="i_owe">I owe them</button>
+                <div class="card">
+                    <div class="sec-head"><h2>Your budgets</h2></div>
+                    <div id="budgetFullList"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SAVINGS ================= -->
+        <section id="savings-tab" class="tab-content">
+            <button type="button" class="btn btn-primary fold-btn" data-fold="goalFormCard"><i class="fa-solid fa-plus"></i> New goal</button>
+            <div class="split">
+                <div class="card fold-target" id="goalFormCard">
+                    <div class="sec-head"><h2>New goal</h2></div>
+                    <form id="savingsGoalForm" class="form">
+                        <div class="form-group">
+                            <label for="goalName">Name</label>
+                            <input type="text" id="goalName" class="form-control" placeholder="Laptop" maxlength="60" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="targetAmount">Target</label>
+                                <input type="number" id="targetAmount" class="form-control" placeholder="0.00" min="1" step="0.01" inputmode="decimal" required>
                             </div>
                             <div class="form-group">
-                                <label for="debtPerson">Name</label>
-                                <input type="text" id="debtPerson" class="form-control" maxlength="60" placeholder="e.g. Tunde" required>
+                                <label for="currentSaved">Saved so far</label>
+                                <input type="number" id="currentSaved" class="form-control" value="0" min="0" step="0.01" inputmode="decimal">
                             </div>
-                            <div class="form-group">
-                                <label for="debtAmount">Amount</label>
-                                <input type="number" id="debtAmount" class="form-control" placeholder="0.00" min="0.01" step="0.01" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="debtNote">What for <span class="text-muted">(Optional)</span></label>
-                                <input type="text" id="debtNote" class="form-control" maxlength="200" placeholder="e.g. Lunch, Textbook">
-                            </div>
-                            <div class="form-group-row">
-                                <div class="form-group flex-1">
-                                    <label for="debtPhone">WhatsApp no. <span class="text-muted">(Optional)</span></label>
-                                    <input type="tel" id="debtPhone" class="form-control" maxlength="20" placeholder="0801 234 5678">
-                                </div>
-                                <div class="form-group flex-1">
-                                    <label for="debtDue">Due date <span class="text-muted">(Optional)</span></label>
-                                    <input type="date" id="debtDue" class="form-control">
-                                </div>
-                            </div>
-                            <button type="submit" class="btn btn-primary btn-full"><i class="fa-solid fa-plus"></i> Save Record</button>
-                        </form>
-                    </div>
-                    <div class="card">
-                        <div class="card-header"><h2>Active</h2></div>
-                        <div id="debtActiveList"></div>
-                        <details class="debt-history">
-                            <summary>Settled history (<span id="debtSettledCount">0</span>)</summary>
-                            <div id="debtSettledList"></div>
-                        </details>
-                    </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="targetDate">Target date</label>
+                            <input type="date" id="targetDate" class="form-control">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">Create goal</button>
+                    </form>
                 </div>
-            </section>
+                <div class="goal-grid" id="savingsCardsContainer"></div>
+            </div>
+        </section>
 
-            <section id="projections-tab" class="tab-content">
-                <div class="projection-setup-container">
-                    <div class="card banner-card">
-                        <div class="banner-content">
-                            <div class="banner-text">
-                                <h2>Smart Semester Cashflow Planner</h2>
-                                <p>Map your bulk student funding across the term to ensure you never run out of cash before exams.</p>
-                            </div>
-                            <div class="banner-icon">
-                                <i class="fa-solid fa-calendar-check"></i>
-                            </div>
+        <!-- ================= OWE / OWED ================= -->
+        <section id="debts-tab" class="tab-content">
+            <div class="debt-summary">
+                <div class="card debt-sum owed"><span>Owed to you</span><strong id="debtOwedTotal">0</strong></div>
+                <div class="card debt-sum owe"><span>You owe</span><strong id="debtOweTotal">0</strong></div>
+            </div>
+            <button type="button" class="btn btn-primary fold-btn" data-fold="debtFormCard"><i class="fa-solid fa-plus"></i> Add record</button>
+            <div class="split">
+                <div class="card fold-target" id="debtFormCard">
+                    <div class="sec-head"><h2>Add record</h2></div>
+                    <form id="debtForm" class="form">
+                        <div class="seg" id="debtDir">
+                            <button type="button" class="seg-btn active" data-dir="owed_to_me">They owe me</button>
+                            <button type="button" class="seg-btn" data-dir="i_owe">I owe them</button>
                         </div>
-                    </div>
-
-                    <div class="projection-grid-layout">
-                        <div class="card">
-                            <div class="card-header">
-                                <h2>Semester Parameters</h2>
-                            </div>
-                            <form id="projectionForm" class="form">
-                                <div class="form-group">
-                                    <label for="semesterWeeks">Length of Semester (Weeks)</label>
-                                    <input type="number" id="semesterWeeks" class="form-control" value="16" min="1" max="52" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="bulkIncome">Semester Bulk Funding</label>
-                                    <input type="number" id="bulkIncome" class="form-control" placeholder="e.g. 5000" min="0" step="any" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="savingsSafety">Emergency Savings Buffer</label>
-                                    <input type="number" id="savingsSafety" class="form-control" value="500" min="0" step="any">
-                                </div>
-                                <button type="submit" class="btn btn-primary btn-full">
-                                    <i class="fa-solid fa-wand-magic-sparkles"></i> Calculate Smart Plan
-                                </button>
-                            </form>
+                        <div class="form-group">
+                            <label for="debtPerson">Name</label>
+                            <input type="text" id="debtPerson" class="form-control" maxlength="60" placeholder="Tunde" required>
                         </div>
-
-                        <div class="card projection-result-card">
-                            <div class="card-header">
-                                <h2>Weekly Allowance Recommendation</h2>
-                            </div>
-                            <div class="projection-result-body" id="projectionResults">
-                                <div class="empty-projection-state">
-                                    <i class="fa-solid fa-calculator text-muted"></i>
-                                    <p>Enter your semester parameters to calculate your personalized weekly allowance budget.</p>
-                                </div>
-                            </div>
+                        <div class="form-group">
+                            <label for="debtAmount">Amount</label>
+                            <input type="number" id="debtAmount" class="form-control" placeholder="0.00" min="0.01" step="0.01" inputmode="decimal" required>
                         </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Financial Intelligence Tab Content -->
-            <section id="intelligence-tab" class="tab-content">
-                <div class="projection-setup-container">
-                    <div class="card banner-card" style="background: linear-gradient(135deg, #4318ff 0%, #05cd99 100%);">
-                        <div class="banner-content">
-                            <div class="banner-text">
-                                <h2><i class="fa-solid fa-brain"></i> Financial Intelligence Layer</h2>
-                                <p>Deep deterministic calculations and AI insights analyzing your transactions, leaks, speedometers, forecasts, simulations, and budgets.</p>
-                            </div>
-                            <div class="banner-icon">
-                                <i class="fa-solid fa-wand-magic-sparkles"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="two-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-                        <div class="card">
-                            <div class="card-header">
-                                <h2><i class="fa-solid fa-user-tag text-primary"></i> Spending Behavior Profile & Streaks</h2>
-                            </div>
-                            <div id="behaviorProfileBox" style="margin-bottom: 16px;">
-                                <h3 id="profileTitleDisplay" style="font-size: 1.1rem; font-weight: 700; margin-bottom: 6px;">Loading profile...</h3>
-                                <p id="profileDescDisplay" class="text-muted" style="font-size: 0.9rem; line-height: 1.5;"></p>
-                            </div>
-                            <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 10px;">Smart Financial Streaks</h4>
-                            <div id="financialStreaksList" style="display: flex; flex-direction: column; gap: 8px;"></div>
-                        </div>
-
-                        <div class="card">
-                            <div class="card-header">
-                                <h2><i class="fa-solid fa-gauge-high text-warning"></i> Spending Speedometer & Leaks</h2>
-                            </div>
-                            <div id="speedometerBox" style="margin-bottom: 16px; padding: 12px; background: var(--bg-input); border-radius: 12px; border: 1px solid var(--border-color);"></div>
-                            <div id="leaksBox" style="display: flex; flex-direction: column; gap: 10px;"></div>
-                        </div>
-                    </div>
-
-                    <div class="two-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-                        <div class="card">
-                            <div class="card-header">
-                                <h2><i class="fa-solid fa-crystal-ball text-success"></i> Future Balance Prediction</h2>
-                            </div>
-                            <div id="futurePredictionBox" style="display: flex; flex-direction: column; gap: 12px;"></div>
-                        </div>
-
-                        <div class="card">
-                            <div class="card-header">
-                                <h2><i class="fa-solid fa-basket-shopping text-primary"></i> Can I Afford This? Tool</h2>
-                            </div>
-                            <form id="affordForm" class="form">
-                                <div class="form-group">
-                                    <label for="affordAmount">Potential Purchase Amount</label>
-                                    <input type="number" id="affordAmount" class="form-control" placeholder="e.g. 150" min="0.01" step="0.01" required>
-                                </div>
-                                <button type="submit" class="btn btn-primary btn-full">
-                                    <i class="fa-solid fa-calculator"></i> Analyze Affordability
-                                </button>
-                            </form>
-                            <div id="affordResultBox" style="margin-top: 16px;"></div>
-                        </div>
-                    </div>
-
-                    <div class="two-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-                        <div class="card">
-                            <div class="card-header">
-                                <h2><i class="fa-solid fa-sliders text-warning"></i> What-If Money Simulator</h2>
-                            </div>
+                        <details class="optional-fold">
+                            <summary>More details</summary>
                             <div class="form">
                                 <div class="form-group">
-                                    <label for="simulatorType">Simulation Scenario</label>
-                                    <select id="simulatorType" class="form-control">
-                                        <option value="spend_less_pct">Reduce Remaining Spending by %</option>
-                                        <option value="extra_income">Earn Extra Income (Amount)</option>
-                                        <option value="remove_recurring">Remove Recurring Expense (Amount)</option>
-                                    </select>
+                                    <label for="debtNote">What for</label>
+                                    <input type="text" id="debtNote" class="form-control" maxlength="200" placeholder="Lunch">
                                 </div>
-                                <div class="form-group">
-                                    <label for="simulatorValue">Scenario Value</label>
-                                    <input type="number" id="simulatorValue" class="form-control" value="20" min="1" step="1" required>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="debtPhone">WhatsApp</label>
+                                        <input type="tel" id="debtPhone" class="form-control" maxlength="20" placeholder="0801 234 5678">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="debtDue">Due date</label>
+                                        <input type="date" id="debtDue" class="form-control">
+                                    </div>
                                 </div>
-                                <button type="button" id="runSimulatorBtn" class="btn btn-primary btn-full">
-                                    <i class="fa-solid fa-bolt"></i> Run Simulation
-                                </button>
                             </div>
-                            <div id="simulatorResultBox" style="margin-top: 16px;"></div>
-                        </div>
-
-                        <div class="card">
-                            <div class="card-header">
-                                <h2><i class="fa-solid fa-triangle-exclamation text-danger"></i> Goal Collision Detector</h2>
-                            </div>
-                            <div id="goalCollisionsBox" style="display: flex; flex-direction: column; gap: 12px;"></div>
-                        </div>
-                    </div>
-
-                    <div class="two-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-                        <div class="card">
-                            <div class="card-header">
-                                <h2><i class="fa-solid fa-bolt-lightning text-danger"></i> Unusual / Impulse Detector</h2>
-                            </div>
-                            <div id="unusualPurchasesBox" style="display: flex; flex-direction: column; gap: 10px;"></div>
-                        </div>
-
-                        <div class="card">
-                            <div class="card-header">
-                                <h2><i class="fa-solid fa-rotate text-primary"></i> Recurring Expense Discovery</h2>
-                            </div>
-                            <div id="recurringExpensesBox" style="display: flex; flex-direction: column; gap: 10px;"></div>
-                        </div>
-                    </div>
-
-                    <div class="two-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-                        <div class="card">
-                            <div class="card-header">
-                                <h2><i class="fa-solid fa-clock-rotate-left text-primary"></i> Financial Time Machine</h2>
-                            </div>
-                            <div id="timeMachineBox" style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto;"></div>
-                        </div>
-
-                        <div class="card">
-                            <div class="card-header">
-                                <h2><i class="fa-solid fa-magnifying-glass-chart text-warning"></i> Why Did I Spend More?</h2>
-                            </div>
-                            <div id="whySpendMoreBox" style="padding: 12px; background: var(--bg-input); border-radius: 12px; border: 1px solid var(--border-color);"></div>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header">
-                            <h2><i class="fa-solid fa-lightbulb text-success"></i> Smart Budget Suggestions</h2>
-                        </div>
-                        <p class="subtitle" style="margin-bottom: 16px;">Realistic budget limits derived from your historical spending.</p>
-                        <div id="smartBudgetsBox" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;"></div>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header">
-                            <h2><i class="fa-solid fa-file-waveform text-primary"></i> Monthly Money Autopsy & AI Review</h2>
-                        </div>
-                        <div id="monthlyAutopsyBox" style="display: flex; flex-direction: column; gap: 16px;"></div>
-                    </div>
+                        </details>
+                        <button type="submit" class="btn btn-primary btn-full">Save</button>
+                    </form>
                 </div>
-            </section>
-
-            <!-- Profile & Settings Tab Content (Dedicated Nav Tab) -->
-            <section id="profile-tab" class="tab-content">
                 <div class="card">
-                    <div class="card-header">
-                        <h2><i class="fa-solid fa-user-gear text-primary"></i> Profile & Account Settings</h2>
+                    <div class="sec-head"><h2>Active</h2></div>
+                    <div id="debtActiveList"></div>
+                    <details class="debt-history">
+                        <summary>Settled (<span id="debtSettledCount">0</span>)</summary>
+                        <div id="debtSettledList"></div>
+                    </details>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SEMESTER PLAN ================= -->
+        <section id="projections-tab" class="tab-content">
+            <div class="split plan-grid">
+                <div class="card">
+                    <div class="sec-head"><h2>Semester plan</h2></div>
+                    <form id="projectionForm" class="form">
+                        <div class="form-group">
+                            <label for="semesterWeeks">Weeks in the semester</label>
+                            <input type="number" id="semesterWeeks" class="form-control" value="16" min="1" max="52" inputmode="numeric" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="bulkIncome">Money for the semester</label>
+                            <input type="number" id="bulkIncome" class="form-control" placeholder="5000" min="0" step="any" inputmode="decimal" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="savingsSafety">Emergency buffer</label>
+                            <input type="number" id="savingsSafety" class="form-control" value="500" min="0" step="any" inputmode="decimal">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">Calculate</button>
+                    </form>
+                </div>
+                <div class="card plan-result-card">
+                    <div class="sec-head"><h2>Weekly allowance</h2></div>
+                    <div id="projectionResults"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= INSIGHTS ================= -->
+        <section id="intelligence-tab" class="tab-content">
+            <div class="tile-group">
+                <h2>Right now</h2>
+                <div class="tile-grid">
+                    <button type="button" class="tile" data-panel="pace"><span class="tile-ico warn"><i class="fa-solid fa-gauge-high"></i></span><span class="tile-title">Spending pace</span><span class="tile-sub" data-sub="pace"></span></button>
+                    <button type="button" class="tile" data-panel="forecast"><span class="tile-ico pos"><i class="fa-solid fa-chart-line"></i></span><span class="tile-title">Month-end forecast</span><span class="tile-sub" data-sub="forecast"></span></button>
+                    <button type="button" class="tile" data-panel="style"><span class="tile-ico"><i class="fa-solid fa-user-tag"></i></span><span class="tile-title">Spending style</span><span class="tile-sub" data-sub="style"></span></button>
+                    <button type="button" class="tile" data-panel="unusual"><span class="tile-ico neg"><i class="fa-solid fa-bolt"></i></span><span class="tile-title">Unusual spending</span><span class="tile-sub" data-sub="unusual"></span></button>
+                </div>
+            </div>
+            <div class="tile-group">
+                <h2>Plan ahead</h2>
+                <div class="tile-grid">
+                    <button type="button" class="tile" data-panel="afford"><span class="tile-ico"><i class="fa-solid fa-basket-shopping"></i></span><span class="tile-title">Can I afford it?</span><span class="tile-sub" data-sub="afford"></span></button>
+                    <button type="button" class="tile" data-panel="whatif"><span class="tile-ico warn"><i class="fa-solid fa-sliders"></i></span><span class="tile-title">What if?</span><span class="tile-sub" data-sub="whatif"></span></button>
+                    <button type="button" class="tile" data-panel="smart"><span class="tile-ico pos"><i class="fa-solid fa-lightbulb"></i></span><span class="tile-title">Smart budgets</span><span class="tile-sub" data-sub="smart"></span></button>
+                    <button type="button" class="tile" data-panel="collide"><span class="tile-ico neg"><i class="fa-solid fa-triangle-exclamation"></i></span><span class="tile-title">Goal risks</span><span class="tile-sub" data-sub="collide"></span></button>
+                </div>
+            </div>
+            <div class="tile-group">
+                <h2>Look back</h2>
+                <div class="tile-grid">
+                    <button type="button" class="tile" data-panel="recurring"><span class="tile-ico"><i class="fa-solid fa-rotate"></i></span><span class="tile-title">Recurring costs</span><span class="tile-sub" data-sub="recurring"></span></button>
+                    <button type="button" class="tile" data-panel="history"><span class="tile-ico"><i class="fa-solid fa-clock-rotate-left"></i></span><span class="tile-title">Past months</span><span class="tile-sub" data-sub="history"></span></button>
+                    <button type="button" class="tile" data-panel="why"><span class="tile-ico warn"><i class="fa-solid fa-magnifying-glass-chart"></i></span><span class="tile-title">Why I spent more</span><span class="tile-sub" data-sub="why"></span></button>
+                    <button type="button" class="tile" data-panel="review"><span class="tile-ico pos"><i class="fa-solid fa-file-lines"></i></span><span class="tile-title">Monthly review</span><span class="tile-sub" data-sub="review"></span></button>
+                </div>
+            </div>
+
+            <!-- Panel contents live here until a tile opens them in the sheet -->
+            <div id="insightStore" hidden>
+                <div class="panel" id="panel-pace" data-title="Spending pace"><div id="speedometerBox"></div><div id="leaksBox"></div></div>
+                <div class="panel" id="panel-forecast" data-title="Month-end forecast"><div id="futurePredictionBox"></div></div>
+                <div class="panel" id="panel-style" data-title="Spending style">
+                    <div class="callout brand"><strong id="profileTitleDisplay"></strong><span id="profileDescDisplay"></span></div>
+                    <div id="financialStreaksList"></div>
+                </div>
+                <div class="panel" id="panel-unusual" data-title="Unusual spending"><div id="unusualPurchasesBox"></div></div>
+                <div class="panel" id="panel-afford" data-title="Can I afford it?">
+                    <form id="affordForm" class="form">
+                        <div class="form-group">
+                            <label for="affordAmount">Price</label>
+                            <input type="number" id="affordAmount" class="form-control amount-input" placeholder="0.00" min="0.01" step="0.01" inputmode="decimal" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">Check</button>
+                    </form>
+                    <div id="affordResultBox"></div>
+                </div>
+                <div class="panel" id="panel-whatif" data-title="What if?">
+                    <div class="form">
+                        <div class="form-group">
+                            <label for="simulatorType">Scenario</label>
+                            <select id="simulatorType" class="form-control">
+                                <option value="spend_less_pct">Spend less (%)</option>
+                                <option value="extra_income">Earn extra</option>
+                                <option value="remove_recurring">Cut a recurring cost</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="simulatorValue">Value</label>
+                            <input type="number" id="simulatorValue" class="form-control" value="20" min="1" step="1" inputmode="decimal" required>
+                        </div>
+                        <button type="button" id="runSimulatorBtn" class="btn btn-primary btn-full">Run</button>
                     </div>
-                    <div class="profile-settings-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
-                        <!-- Column 1: Profile Info & Avatar -->
+                    <div id="simulatorResultBox"></div>
+                </div>
+                <div class="panel" id="panel-smart" data-title="Smart budgets"><div id="smartBudgetsBox"></div></div>
+                <div class="panel" id="panel-collide" data-title="Goal risks"><div id="goalCollisionsBox"></div></div>
+                <div class="panel" id="panel-recurring" data-title="Recurring costs"><div id="recurringExpensesBox"></div></div>
+                <div class="panel" id="panel-history" data-title="Past months"><div id="timeMachineBox"></div></div>
+                <div class="panel" id="panel-why" data-title="Why I spent more"><div id="whySpendMoreBox"></div></div>
+                <div class="panel" id="panel-review" data-title="Monthly review"><div id="monthlyAutopsyBox"></div></div>
+            </div>
+        </section>
+
+        <!-- ================= PROFILE ================= -->
+        <section id="profile-tab" class="tab-content">
+            <div class="split">
+                <div class="card">
+                    <div class="profile-head">
+                        <span class="avatar avatar-lg" id="profileAvatarPreview"><i class="fa-solid fa-user-graduate"></i></span>
                         <div>
-                            <form id="profileForm" class="form">
-                                <div class="form-group">
-                                    <label>Account ID (Unique)</label>
-                                    <div class="form-control" style="background: var(--border-color); font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                        <span id="profileAccountIdDisplay">EDU-000000</span>
-                                        <i class="fa-solid fa-shield-halved text-primary"></i>
-                                    </div>
-                                    <small class="text-muted">This ID appears on your transaction reports and printouts.</small>
-                                </div>
-                                <div class="form-group">
-                                    <label for="profileUsername">Username</label>
-                                    <input type="text" id="profileUsername" class="form-control" required>
-                                </div>
-                                <div class="form-group-row">
-                                    <div class="form-group flex-1">
-                                        <label for="profileFirstName">First Name</label>
-                                        <input type="text" id="profileFirstName" class="form-control">
-                                    </div>
-                                    <div class="form-group flex-1">
-                                        <label for="profileLastName">Last Name</label>
-                                        <input type="text" id="profileLastName" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="profileDob">Date of Birth</label>
-                                    <input type="date" id="profileDob" class="form-control">
-                                </div>
-                                 <div class="form-group">
-                                    <label for="profileCurrency">Preferred Currency</label>
-                                    <select id="profileCurrency" class="form-control"></select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Choose Avatar (Select One)</label>
-                                    <div class="avatar-grid" id="avatarGrid">
-                                        <!-- Populated dynamically (8-12 avatars) -->
-                                    </div>
-                                </div>
-                                <button type="submit" class="btn btn-primary mt-3">
-                                    <i class="fa-solid fa-floppy-disk"></i> Save Profile Settings
-                                </button>
-                            </form>
+                            <b id="profileNameDisplay"></b>
+                            <small>ID <span id="profileAccountIdDisplay">EDU-000000</span></small>
                         </div>
-
-                        <!-- Column 2: Security & Sensitive Actions -->
-                        <div style="display: flex; flex-direction: column; gap: 24px;">
-                            <div class="card" style="background: var(--bg-input); border: 1px solid var(--border-color);">
-                                <h3 style="font-size: 1.05rem; margin-bottom: 14px;"><i class="fa-solid fa-key"></i> Change Password</h3>
-                                <form id="passwordForm" class="form">
-                                    <div class="form-group">
-                                        <label for="oldPassword">Current Password</label>
-                                        <input type="password" id="oldPassword" class="form-control" placeholder="••••••••" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="newPassword">New Password</label>
-                                        <input type="password" id="newPassword" class="form-control" placeholder="••••••••" required minlength="6">
-                                    </div>
-                                    <button type="submit" class="btn btn-secondary-outline">
-                                        Update Password
-                                    </button>
-                                </form>
+                    </div>
+                    <form id="profileForm" class="form">
+                        <div class="form-group">
+                            <span class="field-label">Avatar</span>
+                            <div class="avatar-grid" id="avatarGrid"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="profileUsername">Username</label>
+                            <input type="text" id="profileUsername" class="form-control" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="profileFirstName">First name</label>
+                                <input type="text" id="profileFirstName" class="form-control">
                             </div>
-
-                            <div class="card" style="background: var(--danger-light); border: 1px solid var(--danger);">
-                                <h3 style="font-size: 1.05rem; margin-bottom: 10px; color: var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i> Reset Account Data</h3>
-                                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">Wipe all transactions, budgets, and savings goals. Requires password verification and confirmation dialog.</p>
-                                <button type="button" class="btn btn-danger-outline btn-full" id="resetDataInsideBtn">
-                                    <i class="fa-solid fa-trash-can"></i> Reset All Financial Data
-                                </button>
+                            <div class="form-group">
+                                <label for="profileLastName">Last name</label>
+                                <input type="text" id="profileLastName" class="form-control">
                             </div>
                         </div>
+                        <div class="form-group">
+                            <label for="profileDob">Date of birth</label>
+                            <input type="date" id="profileDob" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="profileCurrency">Currency</label>
+                            <select id="profileCurrency" class="form-control"></select>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">Save changes</button>
+                    </form>
+                </div>
+
+                <div class="stack" id="profileSideStack">
+                    <details class="card fold-card">
+                        <summary>Change password</summary>
+                        <form id="passwordForm" class="form">
+                            <div class="form-group">
+                                <label for="oldPassword">Current password</label>
+                                <input type="password" id="oldPassword" class="form-control" autocomplete="current-password" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="newPassword">New password</label>
+                                <input type="password" id="newPassword" class="form-control" autocomplete="new-password" minlength="6" required>
+                            </div>
+                            <button type="submit" class="btn btn-ghost btn-full">Update password</button>
+                        </form>
+                    </details>
+                    <div class="card danger-zone">
+                        <div class="sec-head"><h2>Reset data</h2></div>
+                        <p class="text-muted" style="font-size:0.84rem;margin-bottom:12px;">Deletes all transactions, budgets and goals.</p>
+                        <button type="button" class="btn btn-danger btn-full" id="resetDataInsideBtn"><i class="fa-solid fa-trash-can"></i> Reset all data</button>
                     </div>
                 </div>
-            </section>
-        </main>
-    </div>
+            </div>
+        </section>
+    </main>
+</div>
 
-    <!-- Deposit/Add Funds Modal -->
-    <div class="modal-backdrop" id="addFundsModal">
-        <div class="modal">
-            <div class="modal-header">
-                <h3>Add Funds to Goal</h3>
-                <button class="close-modal-btn" id="closeModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="addFundsForm" class="form">
-                    <input type="hidden" id="modalGoalId">
-                    <div class="form-group">
-                        <label for="modalGoalName">Goal Name</label>
-                        <input type="text" id="modalGoalName" class="form-control" disabled>
-                    </div>
-                    <div class="form-group">
-                        <label for="fundAmount">Contribution Amount</label>
-                        <input type="number" id="fundAmount" class="form-control" placeholder="0.00" min="0.01" step="0.01" required>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary-outline" id="cancelModalBtn">Cancel</button>
-                        <button type="submit" class="btn btn-success">
-                            <i class="fa-solid fa-piggy-bank"></i> Save Contribution
-                        </button>
-                    </div>
-                </form>
-            </div>
+<!-- Add funds -->
+<div class="modal-backdrop" id="addFundsModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Add to goal</h3>
+            <button type="button" class="close-modal-btn" id="closeModal" aria-label="Close">&times;</button>
         </div>
-    </div>
-
-    <!-- Confirmation Modal -->
-    <div class="modal-backdrop" id="confirmModal">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 id="confirmModalTitle">Are you sure?</h3>
-                <button class="close-modal-btn" id="closeConfirmModal">&times;</button>
+        <form id="addFundsForm" class="form">
+            <input type="hidden" id="modalGoalId">
+            <div class="form-group">
+                <label for="modalGoalName">Goal</label>
+                <input type="text" id="modalGoalName" class="form-control" disabled>
             </div>
-            <div class="modal-body">
-                <p id="confirmModalMessage" class="text-muted">This action requires your confirmation.</p>
+            <div class="form-group">
+                <label for="fundAmount">Amount</label>
+                <input type="number" id="fundAmount" class="form-control amount-input" placeholder="0.00" min="0.01" step="0.01" inputmode="decimal" required>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary-outline" id="confirmCancelBtn">Cancel</button>
-                <button type="button" class="btn btn-primary" id="confirmOkBtn">Confirm</button>
+                <button type="button" class="btn btn-ghost" id="cancelModalBtn">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add</button>
             </div>
+        </form>
+    </div>
+</div>
+
+<!-- Confirm -->
+<div class="modal-backdrop" id="confirmModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="confirmModalTitle">Are you sure?</h3>
+            <button type="button" class="close-modal-btn" id="closeConfirmModal" aria-label="Close">&times;</button>
+        </div>
+        <p id="confirmModalMessage" class="text-muted"></p>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" id="confirmCancelBtn">Cancel</button>
+            <button type="button" class="btn btn-primary" id="confirmOkBtn">Confirm</button>
         </div>
     </div>
+</div>
 
-    <!-- First-time Setup Wizard (shown once to new users) -->
+<!-- First-time Setup Wizard (shown once to new users) -->
     <div class="onb-backdrop" id="onboardingOverlay" role="dialog" aria-modal="true" aria-labelledby="onbTitle" hidden>
         <div class="onb-card">
             <div class="onb-top">
@@ -887,56 +660,85 @@
         </div>
     </div>
 
-    <!-- Toast Notification -->
-    <div id="toastNotification" class="toast">
-        <span class="toast-icon" id="toastIcon"><i class="fa-solid fa-circle-info"></i></span>
-        <span class="toast-message" id="toastMessage">Message here...</span>
+    
+<!-- Toast -->
+<div id="toastNotification" class="toast">
+    <span class="toast-icon" id="toastIcon"><i class="fa-solid fa-circle-info"></i></span>
+    <span class="toast-message" id="toastMessage"></span>
+</div>
+
+<!-- Phone bottom bar -->
+<nav class="bottom-nav" id="bottomNav" aria-label="Main">
+    <button type="button" class="bn-item active" data-go="dashboard"><i class="fa-solid fa-house"></i><span>Home</span></button>
+    <button type="button" class="bn-item" data-go="transactions"><i class="fa-solid fa-receipt"></i><span>Activity</span></button>
+    <button type="button" class="bn-add" id="fabAdd" aria-label="Add transaction"><i class="fa-solid fa-plus"></i></button>
+    <button type="button" class="bn-item" data-go="intelligence"><i class="fa-solid fa-brain"></i><span>Insights</span></button>
+    <button type="button" class="bn-item" id="bnMore"><i class="fa-solid fa-ellipsis"></i><span>More</span></button>
+</nav>
+
+<div class="sheet-backdrop" id="sheetBackdrop"></div>
+
+<!-- Quick add (the Add transaction card is moved in here on phones) -->
+<div class="sheet mobile-only" id="quickAddSheet" role="dialog" aria-label="Add transaction">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title-row"><h3>Add transaction</h3><button type="button" class="sheet-close" data-close-sheet aria-label="Close"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="sheet-body" id="quickAddSheetBody"></div>
+</div>
+
+<!-- More -->
+<div class="sheet mobile-only" id="moreSheet" role="dialog" aria-label="More">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title-row"><h3>More</h3><button type="button" class="sheet-close" data-close-sheet aria-label="Close"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="sheet-body">
+        <div class="more-grid">
+            <button type="button" class="more-item" data-go="budgets"><i class="fa-solid fa-wallet"></i><span>Budgets</span></button>
+            <button type="button" class="more-item" data-go="savings"><i class="fa-solid fa-piggy-bank"></i><span>Savings</span></button>
+            <button type="button" class="more-item" data-go="debts"><i class="fa-solid fa-handshake"></i><span>Owe / Owed</span></button>
+            <button type="button" class="more-item" data-go="projections"><i class="fa-solid fa-calendar-check"></i><span>Semester plan</span></button>
+            <button type="button" class="more-item" data-go="profile"><i class="fa-solid fa-user-gear"></i><span>Profile</span></button>
+            <button type="button" class="more-item" id="moreTheme"><i class="fa-solid fa-moon"></i><span>Theme</span></button>
+            <button type="button" class="more-item danger" id="moreLogout" data-auth="user"><i class="fa-solid fa-right-from-bracket"></i><span>Log out</span></button>
+            <a class="more-item" data-auth="guest" href="login.html#signup" style="text-decoration:none;color:inherit;"><i class="fa-solid fa-user-plus"></i><span>Sign up</span></a>
+            <a class="more-item" data-auth="guest" href="login.html" style="text-decoration:none;color:inherit;"><i class="fa-solid fa-right-to-bracket"></i><span>Log in</span></a>
+        </div>
     </div>
+</div>
 
-    <!-- Custom Script File -->
-    <script src="currency.js"></script>
-    <script src="geminiapi.js"></script>
-    <script src="intelligence.js"></script>
-    <script src="onboarding.js"></script>
-    <!-- Mobile bottom navigation -->
-    <nav class="bottom-nav" id="bottomNav" aria-label="Main navigation">
-        <button type="button" class="bn-item active" data-go="dashboard"><i class="fa-solid fa-house"></i><span>Home</span></button>
-        <button type="button" class="bn-item" data-go="transactions"><i class="fa-solid fa-list-check"></i><span>Transactions</span></button>
-        <button type="button" class="bn-item" data-go="budgets"><i class="fa-solid fa-wallet"></i><span>Budgets</span></button>
-        <button type="button" class="bn-item" data-go="intelligence"><i class="fa-solid fa-brain"></i><span>Insights</span></button>
-        <button type="button" class="bn-item" id="bnMore" data-more="1"><i class="fa-solid fa-ellipsis"></i><span>More</span></button>
-    </nav>
-    <button type="button" class="fab-add" id="fabAdd" aria-label="Add transaction"><i class="fa-solid fa-plus"></i></button>
+<!-- Insight detail (bottom sheet on phones, dialog on larger screens) -->
+<div class="sheet" id="panelSheet" role="dialog" aria-labelledby="panelSheetTitle">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title-row"><h3 id="panelSheetTitle"></h3><button type="button" class="sheet-close" data-close-sheet aria-label="Close"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="sheet-body" id="panelSheetBody"></div>
+</div>
 
-    <!-- Quick add bottom sheet (the Quick Add card is moved in here on mobile) -->
-    <div class="sheet-backdrop" id="sheetBackdrop"></div>
-    <div class="bottom-sheet" id="quickAddSheet" role="dialog" aria-label="Add transaction">
-        <div class="sheet-handle"></div>
-        <div class="sheet-title-row"><h3>Add Transaction</h3><button type="button" class="sheet-close" data-close-sheet aria-label="Close"><i class="fa-solid fa-xmark"></i></button></div>
-        <div class="sheet-body" id="quickAddSheetBody"></div>
-    </div>
-
-    <!-- More bottom sheet -->
-    <div class="bottom-sheet" id="moreSheet" role="dialog" aria-label="More">
-        <div class="sheet-handle"></div>
-        <div class="sheet-title-row"><h3>More</h3><button type="button" class="sheet-close" data-close-sheet aria-label="Close"><i class="fa-solid fa-xmark"></i></button></div>
-        <div class="sheet-body">
-            <div class="more-grid">
-                <button type="button" class="more-item" data-go="savings"><i class="fa-solid fa-piggy-bank"></i><span>Savings Goals</span></button>
-                <button type="button" class="more-item" data-go="debts"><i class="fa-solid fa-handshake"></i><span>Owe / Owed</span></button>
-                <button type="button" class="more-item" data-go="projections"><i class="fa-solid fa-hourglass-half"></i><span>Semester Planner</span></button>
-                <button type="button" class="more-item" data-go="profile"><i class="fa-solid fa-user-gear"></i><span>Profile &amp; Settings</span></button>
-                <button type="button" class="more-item" id="moreTheme"><i class="fa-solid fa-moon"></i><span>Dark / Light</span></button>
-                <button type="button" class="more-item" id="moreDemo"><i class="fa-solid fa-database"></i><span>Load Demo Data</span></button>
-                <button type="button" class="more-item danger" id="moreLogout"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></button>
+<!-- Demo: sign-up prompt -->
+<div class="sheet" id="authSheet" role="dialog" aria-label="Create an account">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title-row"><span></span><button type="button" class="sheet-close" data-close-sheet aria-label="Close"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="sheet-body">
+        <div class="auth-sheet-body">
+            <span class="auth-sheet-ico"><i class="fa-solid fa-lock"></i></span>
+            <h4>Create a free account</h4>
+            <p id="authSheetMsg">Sign up to save your own money data.</p>
+            <div class="auth-sheet-actions">
+                <a class="btn btn-primary btn-full" href="login.html#signup">Sign up</a>
+                <a class="btn btn-ghost btn-full" href="login.html">Log in</a>
+                <button type="button" class="link-btn" data-close-sheet>Keep exploring</button>
             </div>
         </div>
     </div>
+</div>
 
-    <script src="app.js"></script>
-    <script src="mobile-nav.js"></script>
-    <script src="debts.js"></script>
-    <script src="badges.js"></script>
-    <script src="security-lock.js"></script>
+<script src="demo-data.js"></script>
+<script src="sheets.js"></script>
+<script src="currency.js"></script>
+<script src="geminiapi.js"></script>
+<script src="intelligence.js"></script>
+<script src="onboarding.js"></script>
+<script src="app.js"></script>
+<script src="mobile-nav.js"></script>
+<script src="debts.js"></script>
+<script src="badges.js"></script>
+<script src="security-lock.js"></script>
 </body>
 </html>

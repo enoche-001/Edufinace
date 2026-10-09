@@ -47,12 +47,12 @@
     function ensureCard() {
         let card = $('streakCard');
         if (card) return card;
-        const grid = document.querySelector('#dashboard-tab .dashboard-grid');
-        if (!grid) return null;
+        const slot = $('streakSlot');
+        if (!slot) return null;
         card = document.createElement('div');
         card.id = 'streakCard';
         card.className = 'card streak-card';
-        grid.parentNode.insertBefore(card, grid);
+        slot.appendChild(card);
         card.addEventListener('click', (e) => {
             const b = e.target.closest('[data-badge]');
             if (!b) return;
@@ -74,18 +74,17 @@
             const dt = new Date(Date.UTC(1970, 0, 1) + dn * 86400000);
             week += '<div class="wd' + (m.set.has(dn) ? ' on' : '') + (i === 0 ? ' today' : '') + '"><i></i><span>' + labels[dt.getUTCDay()] + '</span></div>';
         }
-        const sub = m.current === 0 ? 'Log a transaction today to start a streak' :
-            (m.set.has(m.today) ? 'Logged today. Keep it going!' : 'Log something today to keep your streak');
+        const sub = m.current === 0 ? 'Log today' :
+            (m.set.has(m.today) ? 'Logged today' : 'Log today');
         card.innerHTML =
-            '<div class="streak-top"><div class="streak-flame' + (m.current ? ' lit' : '') + '">🔥</div>' +
-            '<div class="streak-text"><div><strong>' + m.current + '</strong> day streak</div><small>' + sub + '</small></div>' +
-            '<div class="streak-best">Best<b>' + m.longest + '</b></div></div>' +
-            '<div class="week-dots">' + week + '</div>' +
-            '<div class="badge-head"><b>Badges</b><small>' + earned.length + ' / ' + BADGES.length + '</small></div>' +
-            '<div class="badge-row">' + BADGES.map(b => {
+            '<div class="streak-top"><div class="streak-flame' + (m.current ? ' lit' : '') + '">\ud83d\udd25</div>' +
+            '<div class="streak-text"><div><strong>' + m.current + '</strong> day streak</div><small>' + sub + ' \u00b7 best ' + m.longest + '</small></div>' +
+            '<div class="week-dots">' + week + '</div></div>' +
+            '<details class="badge-fold"' + (card.querySelector('.badge-fold[open]') ? ' open' : '') + '><summary><span>Badges</span><b>' + earned.length + ' / ' + BADGES.length + '</b></summary>' +
+            '<div class="badge-grid">' + BADGES.map(b => {
                 const on = b.test(m);
-                return '<button type="button" class="badge-chip' + (on ? ' on' : '') + '" data-badge="' + b.id + '"><span class="bi">' + (on ? b.icon : '🔒') + '</span><span class="bn">' + b.name + '</span></button>';
-            }).join('') + '</div>';
+                return '<button type="button" class="badge-chip' + (on ? ' on' : '') + '" data-badge="' + b.id + '"><span class="bi">' + (on ? b.icon : '\ud83d\udd12') + '</span><span class="bn">' + b.name + '</span></button>';
+            }).join('') + '</div></details>';
         celebrate(earned);
     }
 
@@ -130,7 +129,16 @@
         unsubs.forEach(f => f()); unsubs = [];
         S.tx = []; S.goals = []; S.budgets = {}; S.loaded = { tx: false, goals: false, budgets: false };
         uid = u ? u.uid : null;
-        if (!uid) return;
+        if (!uid) {
+            // Signed-out visitors see the demo streak
+            const d = window.EDU_DEMO;
+            if (d) {
+                S.tx = d.transactions; S.goals = d.savingsGoals; S.budgets = d.budgets;
+                S.loaded = { tx: true, goals: true, budgets: true };
+                render();
+            }
+            return;
+        }
         const root = db.collection('users').doc(uid);
         unsubs.push(root.collection('transactions').onSnapshot(s => { S.tx = s.docs.map(d => d.data()); S.loaded.tx = true; render(); }, () => {}));
         unsubs.push(root.collection('savingsGoals').onSnapshot(s => { S.goals = s.docs.map(d => d.data()); S.loaded.goals = true; render(); }, () => {}));

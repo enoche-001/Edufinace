@@ -181,20 +181,20 @@
         const tab = $('profile-tab');
         if (!tab) return;
         let card = $('lockCard');
-        if (!card) { card = document.createElement('div'); card.id = 'lockCard'; card.className = 'card lock-card'; tab.appendChild(card); }
+        if (!card) { card = document.createElement('div'); card.id = 'lockCard'; card.className = 'card lock-card'; (document.getElementById('profileSideStack') || tab).appendChild(card); }
         const on = !!cfg;
         const bioOk = await bioAvailable();
         card.innerHTML =
-            '<div class="card-header"><h2><i class="fa-solid fa-lock text-primary"></i> App Lock</h2></div>' +
-            '<p class="text-muted" style="margin-bottom:14px">Ask for a PIN' + (bioOk ? ' or fingerprint' : '') + ' when you open EduFinance. Stored on this device only.</p>' +
+            '<div class="sec-head"><h2>App lock</h2></div>' +
+            '<p>Ask for a PIN' + (bioOk ? ' or fingerprint' : '') + ' when the app opens. Stays on this device.</p>' +
             '<div class="lock-actions">' +
             (on
-                ? '<button type="button" class="btn btn-secondary-outline btn-small" id="lcChange">Change PIN</button>' +
-                  (bioOk ? '<button type="button" class="btn btn-secondary-outline btn-small" id="lcBio">' + (cfg.bio ? 'Turn off fingerprint' : 'Turn on fingerprint') + '</button>' : '') +
-                  '<button type="button" class="btn btn-danger-outline btn-small" id="lcOff">Turn off lock</button>'
-                : '<button type="button" class="btn btn-primary btn-small" id="lcOn"><i class="fa-solid fa-lock"></i> Set up PIN</button>') +
+                ? '<button type="button" class="btn btn-ghost btn-sm" id="lcChange">Change PIN</button>' +
+                  (bioOk ? '<button type="button" class="btn btn-ghost btn-sm" id="lcBio">' + (cfg.bio ? 'Turn off fingerprint' : 'Turn on fingerprint') + '</button>' : '') +
+                  '<button type="button" class="btn btn-danger btn-sm" id="lcOff">Turn off lock</button>'
+                : '<button type="button" class="btn btn-primary btn-sm" id="lcOn"><i class="fa-solid fa-lock"></i> Set up PIN</button>') +
             '</div>' +
-            (on ? '<div class="form-group" style="margin-top:14px"><label for="lcDelay">Lock after leaving the app for</label>' +
+            (on ? '<div class="form-group" style="margin-top:14px"><label for="lcDelay">Lock after</label>' +
                 '<select id="lcDelay" class="form-control">' +
                 [[0, 'Immediately'], [30, '30 seconds'], [60, '1 minute'], [300, '5 minutes']].map(o => '<option value="' + o[0] + '"' + (cfg.delay === o[0] ? ' selected' : '') + '>' + o[1] + '</option>').join('') +
                 '</select></div>' : '');

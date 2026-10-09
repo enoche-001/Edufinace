@@ -164,46 +164,47 @@ document.addEventListener('DOMContentLoaded', () => {
         populateCategories();
         renderAvatarOptions();
         setupEventListeners();
+        setupExtraListeners();
         setupAuthListener();
+    }
+
+    function setSession(signedIn) {
+        document.body.classList.toggle('is-user', signedIn);
+        document.body.classList.toggle('is-guest', !signedIn);
     }
 
     function setupAuthListener() {
         if (!auth) {
-            renderAll();
+            loadLocalDemoData();
             return;
         }
 
         auth.onAuthStateChanged(user => {
             if (user) {
                 currentUser = user;
+                setSession(true);
+                state.transactions = [];
+                state.budgets = {};
+                state.savingsGoals = [];
                 subscribeToFirestoreData(user.uid);
             } else {
                 currentUser = null;
+                cleanupFirestoreListeners();
                 loadLocalDemoData();
             }
         });
     }
 
+    // Visitors who are not signed in see the same dashboard, filled with demo data.
+    // Anything that would save or change data asks them to sign up (see EduUI.gate).
     function loadLocalDemoData() {
-        state.transactions = [
-            { id: 'tx_1', type: 'income', amount: 3500, description: 'Student Financial Aid / Loan', category: 'Student Loan / Grant', note: 'Fall Semester Disbursement', date: '2026-09-01' },
-            { id: 'tx_2', type: 'expense', amount: 950, description: 'Campus Dorm Rent', category: 'Rent & Utilities', note: 'September Rent', date: '2026-09-02' },
-            { id: 'tx_3', type: 'expense', amount: 320, description: 'Semester Textbooks', category: 'Tuition & Books', note: 'Calculus 101 Book', date: '2026-09-03' },
-            { id: 'tx_4', type: 'expense', amount: 145, description: 'Weekly Groceries', category: 'Groceries & Food', note: 'Trader Joes', date: '2026-09-10' }
-        ];
-        state.budgets = { 'Groceries & Food': 300, 'Rent & Utilities': 1000 };
-        state.savingsGoals = [
-            { id: 'goal_1', name: 'New MacBook Pro', target: 1200, current: 750, date: '2026-12-15' }
-        ];
-        state.profile = {
-            username: 'Demo Student',
-            firstName: 'Alex',
-            lastName: 'Demo',
-            dob: '2005-01-01',
-            accountId: 'EDU-998877',
-            currency: 'USD', // demo data is written in dollars
-            avatar: 'fa-user-graduate'
-        };
+        setSession(false);
+        const d = window.EDU_DEMO;
+        state.transactions = JSON.parse(JSON.stringify(d.transactions));
+        state.budgets = Object.assign({}, d.budgets);
+        state.savingsGoals = JSON.parse(JSON.stringify(d.savingsGoals));
+        state.projection = Object.assign({}, d.projection);
+        state.profile = Object.assign({}, d.profile);
         renderAll();
     }
 
@@ -312,13 +313,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function applyTheme() {
-        if (state.theme === 'dark') {
-            body.setAttribute('data-theme', 'dark');
-            themeToggleBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
-        } else {
-            body.removeAttribute('data-theme');
-            themeToggleBtn.innerHTML = '<i class="fa-solid fa-moon"></i>';
-        }
+        const dark = state.theme === 'dark';
+        if (dark) body.setAttribute('data-theme', 'dark');
+        else body.removeAttribute('data-theme');
+        themeToggleBtn.innerHTML = dark ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', dark ? '#0b1030' : '#f4f5fa');
     }
 
     function toggleTheme() {
@@ -363,16 +363,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function avatarIcon(icon) {
+        return '<i class="fa-solid ' + icon + '"></i>';
+    }
+
     function renderAvatarOptions() {
         if (!avatarGrid) return;
         avatarGrid.innerHTML = '';
         avatarCollection.forEach(icon => {
-            const item = document.createElement('div');
-            item.className = `avatar-option ${state.profile.avatar === icon ? 'selected' : ''}`;
-            item.innerHTML = `<i class="fa-solid ${icon}"></i>`;
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'avatar-option' + (state.profile.avatar === icon ? ' selected' : '');
+            item.setAttribute('aria-label', icon.replace('fa-', '').replace(/-/g, ' '));
+            item.innerHTML = avatarIcon(icon);
             item.addEventListener('click', () => {
                 state.profile.avatar = icon;
                 renderAvatarOptions();
+                const prev = document.getElementById('profileAvatarPreview');
+                if (prev) prev.innerHTML = avatarIcon(icon);
             });
             avatarGrid.appendChild(item);
         });
@@ -380,8 +388,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setupEventListeners() {
         themeToggleBtn.addEventListener('click', toggleTheme);
-        mobileToggle.addEventListener('click', () => sidebar.classList.add('open'));
-        closeSidebar.addEventListener('click', () => sidebar.classList.remove('open'));
 
         menuItems.forEach(item => {
             item.addEventListener('click', (e) => {
@@ -399,6 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         quickAddForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (window.EduUI.gate('Sign up to start tracking your own money.')) return;
             const newTrans = {
                 type: transTypeSelect.value,
                 amount: parseFloat(document.getElementById('transAmount').value),
@@ -418,7 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
             quickAddForm.reset();
             setDefaultDate();
             populateCategories();
-            showToast('Transaction added successfully!', 'success');
+            showToast('Added', 'success');
         });
 
         if (searchTransInput) searchTransInput.addEventListener('input', renderAllTransactions);
@@ -429,6 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (budgetForm) {
             budgetForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
+                if (window.EduUI.gate('Sign up to set your own budgets.')) return;
                 const cat = document.getElementById('budgetCategory').value;
                 const limit = parseFloat(document.getElementById('budgetLimit').value);
                 state.budgets[cat] = limit;
@@ -440,13 +448,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 budgetForm.reset();
                 renderAll();
-                showToast(`Budget limit set for ${cat}!`, 'success');
+                closeFold('budgetFormCard');
+                showToast(`Budget set for ${cat}`, 'success');
             });
         }
 
         if (savingsGoalForm) {
             savingsGoalForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
+                if (window.EduUI.gate('Sign up to track your own goals.')) return;
                 const newGoal = {
                     name: document.getElementById('goalName').value.trim(),
                     target: parseFloat(document.getElementById('targetAmount').value),
@@ -462,7 +472,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderAll();
                 }
                 savingsGoalForm.reset();
-                showToast('Savings goal created!', 'success');
+                closeFold('goalFormCard');
+                showToast('Goal created', 'success');
             });
         }
 
@@ -478,13 +489,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     await db.collection('users').doc(currentUser.uid).collection('settings').doc('projection').set(state.projection);
                 }
                 renderProjections();
-                showToast('Semester plan saved!', 'success');
+                showToast(currentUser ? 'Plan saved' : 'Plan updated', 'success');
             });
         }
 
         if (profileForm) {
             profileForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
+                if (window.EduUI.gate('Sign up to create your own profile.')) return;
                 state.profile.username = document.getElementById('profileUsername').value.trim();
                 state.profile.firstName = document.getElementById('profileFirstName').value.trim();
                 state.profile.lastName = document.getElementById('profileLastName').value.trim();
@@ -512,7 +524,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
                 renderAll();
-                showToast('Profile and currency updated successfully!', 'success');
+                showToast('Profile saved', 'success');
             });
         }
 
@@ -522,8 +534,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const oldPwd = document.getElementById('oldPassword').value;
                 const newPwd = document.getElementById('newPassword').value;
 
-                if (!currentUser || !currentUser.email) {
-                    showToast('Guest mode cannot change password.', 'error');
+                if (window.EduUI.gate('Sign up to secure your own account.')) return;
+                if (!currentUser.email) {
+                    showToast('This account has no password to change.', 'error');
                     return;
                 }
 
@@ -555,15 +568,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const analyzer = new FinancialAnalyzer(state);
                 const res = analyzer.canIAffordThis(amt);
                 const box = document.getElementById('affordResultBox');
-                if (box) {
-                    box.innerHTML = `
-                        <div style="padding: 14px; background: ${res.canAfford ? 'var(--success-light)' : 'var(--danger-light)'}; border: 1px solid ${res.canAfford ? 'var(--success)' : 'var(--danger)'}; border-radius: 10px;">
-                            <strong>${res.canAfford ? '<i class="fa-solid fa-circle-check text-success"></i> Affordability Approved' : '<i class="fa-solid fa-triangle-exclamation text-danger"></i> Affordability Warning'}</strong>
-                            <p style="font-size: 0.9rem; margin-top: 6px; line-height: 1.5;">${escapeHtml(res.advice)}</p>
-                            <small class="text-muted" style="display: block; margin-top: 6px;">Projected balance with purchase: ${analyzer.formatCurrency(res.projectedBalanceWithPurchase)}</small>
-                        </div>
-                    `;
-                }
+                if (box) box.innerHTML = callout(res.canAfford ? 'pos' : 'neg', res.canAfford ? 'You can afford it' : 'Think twice', res.advice, 'Balance after: ' + analyzer.formatCurrency(res.projectedBalanceWithPurchase));
             });
         }
 
@@ -572,17 +577,9 @@ document.addEventListener('DOMContentLoaded', () => {
             runSimulatorBtn.addEventListener('click', () => {
                 const type = document.getElementById('simulatorType').value;
                 const val = parseFloat(document.getElementById('simulatorValue').value) || 0;
-                const analyzer = new FinancialAnalyzer(state);
-                const sim = analyzer.simulateWhatIf(type, val);
+                const sim = new FinancialAnalyzer(state).simulateWhatIf(type, val);
                 const box = document.getElementById('simulatorResultBox');
-                if (box) {
-                    box.innerHTML = `
-                        <div style="padding: 14px; background: var(--primary-light); border: 1px solid var(--primary); border-radius: 10px;">
-                            <strong><i class="fa-solid fa-bolt text-primary"></i> Simulation Results</strong>
-                            <p style="font-size: 0.9rem; margin-top: 6px; line-height: 1.5;">${escapeHtml(sim.message)}</p>
-                        </div>
-                    `;
-                }
+                if (box) box.innerHTML = callout('brand', '', sim.message);
             });
         }
 
@@ -597,6 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (addFundsForm) {
             addFundsForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
+                if (window.EduUI.gate('Sign up to add money to your own goals.')) return;
                 const goalId = document.getElementById('modalGoalId').value;
                 const addAmt = parseFloat(document.getElementById('fundAmount').value);
                 
@@ -611,17 +609,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     showToast(`Added ${formatCurrency(addAmt)} to ${goal.name}!`, 'success');
                 }
             });
-        }
-
-        if (loadDemoDataBtn) {
-            if (currentUser) {
-                loadDemoDataBtn.style.display = 'none';
-            } else {
-                loadDemoDataBtn.addEventListener('click', () => {
-                    loadLocalDemoData();
-                    showToast('Demo data loaded!', 'success');
-                });
-            }
         }
 
         if (resetDataBtn) {
@@ -647,6 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (resetDataInsideBtn) {
             resetDataInsideBtn.addEventListener('click', () => {
+                if (window.EduUI.gate('Sign up to manage your own data.')) return;
                 showConfirmDialog('Reset Account Data', 'This will wipe all your financial tracking data. Please confirm your password or intent to proceed.', async () => {
                     state.transactions = [];
                     state.budgets = {};
@@ -705,10 +693,39 @@ document.addEventListener('DOMContentLoaded', () => {
         confirmCallback = null;
     }
 
+    const TAB_TITLES = {
+        dashboard: '', transactions: 'Transactions', budgets: 'Budgets', savings: 'Savings goals',
+        debts: 'Owe / Owed', projections: 'Semester plan', intelligence: 'Insights', profile: 'Profile'
+    };
+    let activeTab = 'dashboard';
+
+    function greetingWord() {
+        const h = new Date().getHours();
+        return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+    }
+
+    function renderHeaderTitle() {
+        if (!greetingHeading || !headerSubtitle) return;
+        if (activeTab === 'dashboard') {
+            greetingHeading.textContent = state.profile.firstName || state.profile.username || 'Student';
+            headerSubtitle.textContent = greetingWord();
+        } else {
+            greetingHeading.textContent = TAB_TITLES[activeTab] || '';
+            headerSubtitle.textContent = '';
+        }
+    }
+
     function switchTab(tabId) {
+        if (!document.getElementById(tabId + '-tab')) return;
+        activeTab = tabId;
         menuItems.forEach(i => i.classList.toggle('active', i.getAttribute('data-tab') === tabId));
         tabContents.forEach(tc => tc.classList.toggle('active', tc.id === `${tabId}-tab`));
+        renderHeaderTitle();
+        window.EduUI.closeAll();
+        window.EduUI.tabChanged(tabId);
+        window.scrollTo(0, 0);
     }
+    window.EduUI.goTo = switchTab;
 
     function renderAll() {
         renderHeaderProfile();
@@ -725,7 +742,6 @@ document.addEventListener('DOMContentLoaded', () => {
         maybeStartOnboarding();
     }
 
-    // ---------- First-time setup wizard ----------
     function localDateString() {
         const d = new Date();
         const pad = n => String(n).padStart(2, '0');
@@ -743,7 +759,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.EduOnboarding.start({
             currency: state.profile.currency,
             name: state.profile.firstName || state.profile.username || '',
-            expenseCategories: state.expense,
+            expenseCategories: categories.expense,
             finish: applyOnboarding
         });
     }
@@ -782,24 +798,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderHeaderProfile() {
-        const usernameEl = document.querySelector('.username');
-        const greetingEl = document.getElementById('greetingHeading');
-        const userAvatarDisp = document.getElementById('userAvatarDisplay');
-
-        const uname = state.profile.username || 'Student';
-        if (usernameEl) usernameEl.textContent = uname;
-        if (greetingEl) greetingEl.textContent = `Welcome back, ${uname}`;
-        if (userAvatarDisp) {
-            userAvatarDisp.className = `avatar fa-solid ${state.profile.avatar || 'fa-user-graduate'}`;
-        }
-
-        if (loadDemoDataBtn) {
-            if (currentUser) {
-                loadDemoDataBtn.style.display = 'none';
-            } else {
-                loadDemoDataBtn.style.display = 'block';
-            }
-        }
+        const nameEl = document.getElementById('appBarUsername');
+        if (nameEl) nameEl.textContent = state.profile.username || 'Student';
+        const icon = state.profile.avatar || 'fa-user-graduate';
+        // One avatar only: its icon is the single child of the button
+        if (userAvatarEl) userAvatarEl.innerHTML = avatarIcon(icon);
+        const prev = document.getElementById('profileAvatarPreview');
+        if (prev) prev.innerHTML = avatarIcon(icon);
+        renderHeaderTitle();
     }
 
     function renderProfileSection() {
@@ -809,133 +815,153 @@ document.addEventListener('DOMContentLoaded', () => {
         const pDob = document.getElementById('profileDob');
         const pAccId = document.getElementById('profileAccountIdDisplay');
         const pCur = document.getElementById('profileCurrency');
+        const pName = document.getElementById('profileNameDisplay');
 
         if (pUser && document.activeElement !== pUser) pUser.value = state.profile.username || '';
         if (pFirst && document.activeElement !== pFirst) pFirst.value = state.profile.firstName || '';
         if (pLast && document.activeElement !== pLast) pLast.value = state.profile.lastName || '';
         if (pDob && document.activeElement !== pDob) pDob.value = state.profile.dob || '';
         if (pAccId) pAccId.textContent = state.profile.accountId || 'EDU-XXXXXX';
+        if (pName) pName.textContent = [state.profile.firstName, state.profile.lastName].filter(Boolean).join(' ') || state.profile.username || 'Student';
         if (pCur) {
             const code = EduCurrency.toCode(state.profile.currency);
             if (!pCur.options.length || pCur.value !== code) EduCurrency.populateSelect(pCur, code);
         }
+        renderAvatarOptions();
+    }
+
+    // Income, expenses and per-category spending for the current month
+    function monthTotals() {
+        const key = localDateString().slice(0, 7);
+        let inc = 0, exp = 0;
+        const byCat = {};
+        state.transactions.forEach(t => {
+            if (!(t.date || '').startsWith(key)) return;
+            if (t.type === 'income') { if (!t.isOpeningBalance) inc += t.amount; }
+            else { exp += t.amount; byCat[t.category] = (byCat[t.category] || 0) + t.amount; }
+        });
+        return { inc, exp, byCat };
     }
 
     function renderDashboardStats() {
-        let totalIncome = 0;
-        let totalExpenses = 0;
-
+        let allIncome = 0;
+        let allExpenses = 0;
         state.transactions.forEach(t => {
-            if (t.type === 'income') totalIncome += t.amount;
-            else totalExpenses += t.amount;
+            if (t.type === 'income') allIncome += t.amount;
+            else allExpenses += t.amount;
         });
+        const balance = allIncome - allExpenses;
+        const month = monthTotals();
 
-        const balance = totalIncome - totalExpenses;
         if (totalBalanceEl) totalBalanceEl.textContent = formatCurrency(balance);
-        if (monthlyIncomeEl) monthlyIncomeEl.textContent = formatCurrency(totalIncome);
-        if (monthlyExpensesEl) monthlyExpensesEl.textContent = formatCurrency(totalExpenses);
+        if (monthlyIncomeEl) monthlyIncomeEl.textContent = formatCurrency(month.inc);
+        if (monthlyExpensesEl) monthlyExpensesEl.textContent = formatCurrency(month.exp);
 
         const remainingWeeks = state.projection.weeks || 16;
-        const avgWeeklyExpense = totalExpenses > 0 ? (totalExpenses / 4) : 150; 
+        const avgWeeklyExpense = month.exp > 0 ? (month.exp / 4) : 150;
         const forecast = balance - (avgWeeklyExpense * (remainingWeeks / 4));
-        if (termForecastEl) termForecastEl.textContent = formatCurrency(forecast);
+        if (termForecastEl) {
+            termForecastEl.textContent = formatCurrency(forecast);
+            termForecastEl.className = 'forecast-value num ' + (forecast >= 0 ? 'text-pos' : 'text-neg');
+        }
 
         if (balanceStatusEl) {
-            if (balance >= 0) {
-                balanceStatusEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> Within safe range';
-                balanceStatusEl.className = 'stat-footer text-success';
-            } else {
-                balanceStatusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Deficit warning!';
-                balanceStatusEl.className = 'stat-footer text-danger';
-            }
+            const ok = balance >= 0;
+            balanceStatusEl.className = 'chip' + (ok ? '' : ' neg');
+            balanceStatusEl.innerHTML = ok
+                ? '<i class="fa-solid fa-circle-check"></i> On track'
+                : '<i class="fa-solid fa-triangle-exclamation"></i> Overspent';
         }
+    }
+
+    function formatShortDate(iso) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return iso || '';
+        const [y, m, d] = iso.split('-').map(Number);
+        const opts = { day: 'numeric', month: 'short' };
+        if (y !== new Date().getFullYear()) opts.year = 'numeric';
+        return new Date(y, m - 1, d).toLocaleDateString(undefined, opts);
+    }
+
+    function txRowHtml(t, withType) {
+        const inc = t.type === 'income';
+        return `
+            <td><strong>${escapeHtml(t.description)}</strong>${t.note ? `<small>${escapeHtml(t.note)}</small>` : ''}</td>
+            <td><span class="badge ${inc ? 'badge-income' : 'badge-expense'}">${escapeHtml(t.category)}</span></td>
+            <td>${formatShortDate(t.date)}</td>
+            ${withType ? `<td>${inc ? 'Income' : 'Expense'}</td>` : ''}
+            <td class="amt ${inc ? 'text-pos' : 'text-neg'}">${inc ? '+' : '\u2212'}${formatCurrency(t.amount)}</td>
+            <td class="act"><button type="button" class="row-btn" aria-label="Delete transaction" onclick="window.deleteTransaction('${escapeHtml(String(t.id))}')"><i class="fa-solid fa-trash-can"></i></button></td>
+        `;
+    }
+
+    function emptyRow(cols, text) {
+        return `<tr><td colspan="${cols}" class="empty-cell">${text}</td></tr>`;
     }
 
     function renderDashboardTransactions() {
         if (!dashboardTransactionsTable) return;
         dashboardTransactionsTable.innerHTML = '';
-        const recent = state.transactions.slice(0, 5);
-
+        const recent = state.transactions.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 5);
         if (recent.length === 0) {
-            dashboardTransactionsTable.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No transactions found.</td></tr>`;
+            dashboardTransactionsTable.innerHTML = emptyRow(5, 'No transactions yet');
             return;
         }
-
         recent.forEach(t => {
             const tr = document.createElement('tr');
-            const amtClass = t.type === 'income' ? 'text-success' : 'text-danger';
-            const sign = t.type === 'income' ? '+' : '-';
-            const noteHtml = t.note ? `<br><small class="text-muted"><i class="fa-solid fa-note-sticky"></i> ${escapeHtml(t.note)}</small>` : '';
-            tr.innerHTML = `
-                <td class="td-desc"><strong>${escapeHtml(t.description)}</strong>${noteHtml}</td>
-                <td class="td-cat"><span class="badge ${t.type === 'income' ? 'badge-income' : 'badge-expense'}">${escapeHtml(t.category)}</span></td>
-                <td class="td-date">${t.date}</td>
-                <td class="text-right td-amt ${amtClass}"><strong>${sign}${formatCurrency(t.amount)}</strong></td>
-                <td class="text-center td-act">
-                    <button class="action-btn delete-btn" onclick="window.deleteTransaction('${t.id}')"><i class="fa-solid fa-trash-can"></i></button>
-                </td>
-            `;
+            tr.innerHTML = txRowHtml(t, false);
             dashboardTransactionsTable.appendChild(tr);
         });
     }
 
+    function meterClass(pct) {
+        return pct >= 100 ? 'neg' : pct >= 80 ? 'warn' : '';
+    }
+
     function renderDashboardBudgets() {
         if (!dashboardBudgetGrid) return;
-        dashboardBudgetGrid.innerHTML = '';
-        const categoriesList = Object.keys(state.budgets);
-
-        if (categoriesList.length === 0) {
-            dashboardBudgetGrid.innerHTML = `<p class="text-muted text-center py-3 col-span-2">No budget limits configured.</p>`;
+        const cats = Object.keys(state.budgets);
+        if (cats.length === 0) {
+            dashboardBudgetGrid.innerHTML = '<p class="empty">No budgets yet</p>';
             return;
         }
-
-        const spendingMap = {};
-        state.transactions.forEach(t => {
-            if (t.type === 'expense') spendingMap[t.category] = (spendingMap[t.category] || 0) + t.amount;
-        });
-
-        categoriesList.forEach(cat => {
+        const spent = monthTotals().byCat;
+        const rows = cats.map(cat => {
             const limit = state.budgets[cat];
-            const spent = spendingMap[cat] || 0;
-            const pct = Math.min(Math.round((spent / limit) * 100), 100);
-            const card = document.createElement('div');
-            card.className = 'budget-progress-card';
-            card.innerHTML = `
-                <div class="budget-card-info">
-                    <span class="budget-cat-name">${escapeHtml(cat)}</span>
-                    <span class="budget-nums">${formatCurrency(spent)} / ${formatCurrency(limit)}</span>
-                </div>
-                <div class="progress-bar-container">
-                    <div class="progress-bar-fill ${pct >= 90 ? 'danger' : pct >= 75 ? 'warning' : ''}" style="width: ${pct}%"></div>
-                </div>
-            `;
-            dashboardBudgetGrid.appendChild(card);
-        });
+            const used = spent[cat] || 0;
+            return { cat, limit, used, raw: limit > 0 ? (used / limit) * 100 : 0 };
+        }).sort((a, b) => b.raw - a.raw).slice(0, 4);
+
+        dashboardBudgetGrid.innerHTML = rows.map(r => {
+            const pct = Math.min(Math.round(r.raw), 100);
+            return `
+                <div class="meter">
+                    <div class="meter-top">
+                        <span class="meter-name">${escapeHtml(r.cat)}</span>
+                        <span class="meter-num">${formatCurrency(r.used)} / ${formatCurrency(r.limit)}</span>
+                    </div>
+                    <div class="bar"><i class="${meterClass(r.raw)}" style="width:${pct}%"></i></div>
+                </div>`;
+        }).join('');
     }
 
     function renderDashboardSavings() {
         if (!dashboardSavingsList) return;
-        dashboardSavingsList.innerHTML = '';
         const goals = state.savingsGoals.slice(0, 3);
         if (goals.length === 0) {
-            dashboardSavingsList.innerHTML = `<p class="text-muted text-center py-3">No active savings goals.</p>`;
+            dashboardSavingsList.innerHTML = '<p class="empty">No goals yet</p>';
             return;
         }
-        goals.forEach(g => {
-            const pct = Math.min(Math.round((g.current / g.target) * 100), 100);
-            const item = document.createElement('div');
-            item.className = 'savings-widget-item';
-            item.innerHTML = `
-                <div class="budget-card-info">
-                    <span class="budget-cat-name">${escapeHtml(g.name)}</span>
-                    <span class="budget-nums">${formatCurrency(g.current)} / ${formatCurrency(g.target)}</span>
-                </div>
-                <div class="progress-bar-container">
-                    <div class="progress-bar-fill" style="width: ${pct}%"></div>
-                </div>
-            `;
-            dashboardSavingsList.appendChild(item);
-        });
+        dashboardSavingsList.innerHTML = goals.map(g => {
+            const pct = g.target > 0 ? Math.min(Math.round((g.current / g.target) * 100), 100) : 0;
+            return `
+                <div class="meter">
+                    <div class="meter-top">
+                        <span class="meter-name">${escapeHtml(g.name)}</span>
+                        <span class="meter-num">${formatCurrency(g.current)} / ${formatCurrency(g.target)}</span>
+                    </div>
+                    <div class="bar"><i class="${pct >= 100 ? 'pos' : ''}" style="width:${pct}%"></i></div>
+                </div>`;
+        }).join('');
     }
 
     function getFilteredTransactions() {
@@ -955,32 +981,42 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function hasActiveFilters() {
+        return !!((searchTransInput && searchTransInput.value) ||
+            (filterCategorySelect && filterCategorySelect.value !== 'all') ||
+            (filterTypeSelect && filterTypeSelect.value !== 'all') ||
+            (exportStartDate && exportStartDate.value) ||
+            (exportEndDate && exportEndDate.value));
+    }
+
     function renderAllTransactions() {
         if (!allTransactionsTable) return;
         allTransactionsTable.innerHTML = '';
         const filtered = getFilteredTransactions();
-
-        filtered.forEach(t => {
-            const tr = document.createElement('tr');
-            const amtClass = t.type === 'income' ? 'text-success' : 'text-danger';
-            const sign = t.type === 'income' ? '+' : '-';
-            const noteHtml = t.note ? `<br><small class="text-muted"><i class="fa-solid fa-note-sticky"></i> ${escapeHtml(t.note)}</small>` : '';
-            tr.innerHTML = `
-                <td class="td-desc"><strong>${escapeHtml(t.description)}</strong>${noteHtml}</td>
-                <td class="td-cat"><span class="badge ${t.type === 'income' ? 'badge-income' : 'badge-expense'}">${escapeHtml(t.category)}</span></td>
-                <td class="td-date">${t.date}</td>
-                <td class="td-type"><span class="text-capitalize">${t.type}</span></td>
-                <td class="text-right td-amt ${amtClass}"><strong>${sign}${formatCurrency(t.amount)}</strong></td>
-                <td class="text-center td-act">
-                    <button class="action-btn delete-btn" onclick="window.deleteTransaction('${t.id}')"><i class="fa-solid fa-trash-can"></i></button>
-                </td>
-            `;
-            allTransactionsTable.appendChild(tr);
+        const sort = sortTransSelect ? sortTransSelect.value : 'date-desc';
+        filtered.sort((a, b) => {
+            if (sort === 'date-asc') return (a.date || '').localeCompare(b.date || '');
+            if (sort === 'amount-desc') return b.amount - a.amount;
+            if (sort === 'amount-asc') return a.amount - b.amount;
+            return (b.date || '').localeCompare(a.date || '');
         });
-        if (paginationInfo) paginationInfo.textContent = `Showing ${filtered.length} transactions`;
+
+        if (filtered.length === 0) {
+            allTransactionsTable.innerHTML = emptyRow(6, hasActiveFilters() ? 'Nothing matches these filters' : 'No transactions yet');
+        } else {
+            filtered.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = txRowHtml(t, true);
+                allTransactionsTable.appendChild(tr);
+            });
+        }
+        if (paginationInfo) paginationInfo.textContent = `${filtered.length} ${filtered.length === 1 ? 'transaction' : 'transactions'}`;
+        const toggle = document.getElementById('filterToggle');
+        if (toggle) toggle.classList.toggle('has-dot', hasActiveFilters());
     }
 
     function exportTransactions(format) {
+        if (window.EduUI.gate('Sign up to export your own transactions.')) return;
         const filtered = getFilteredTransactions();
         if (filtered.length === 0) {
             showToast('No transactions found in selected range to export.', 'error');
@@ -1072,57 +1108,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderBudgetsList() {
         if (!budgetFullList) return;
-        budgetFullList.innerHTML = '';
-        const categoriesList = Object.keys(state.budgets);
-        if (categoriesList.length === 0) {
-            budgetFullList.innerHTML = `<p class="text-muted text-center py-4">No budgets set.</p>`;
+        const cats = Object.keys(state.budgets);
+        if (cats.length === 0) {
+            budgetFullList.innerHTML = '<p class="empty">No budgets yet</p>';
             return;
         }
-        const spendingMap = {};
-        state.transactions.forEach(t => { if (t.type === 'expense') spendingMap[t.category] = (spendingMap[t.category] || 0) + t.amount; });
-
-        categoriesList.forEach(cat => {
+        const spent = monthTotals().byCat;
+        budgetFullList.innerHTML = cats.map(cat => {
             const limit = state.budgets[cat];
-            const spent = spendingMap[cat] || 0;
-            const pct = Math.min(Math.round((spent / limit) * 100), 100);
-            const item = document.createElement('div');
-            item.className = 'budget-full-item';
-            item.innerHTML = `
-                <div class="budget-card-info">
-                    <span class="budget-cat-name">${escapeHtml(cat)}</span>
-                    <div>
-                        <span>${formatCurrency(spent)} / ${formatCurrency(limit)}</span>
-                        <button class="action-btn delete-btn" onclick="window.deleteBudget('${escapeHtml(cat)}')"><i class="fa-solid fa-trash-can"></i></button>
+            const used = spent[cat] || 0;
+            const raw = limit > 0 ? (used / limit) * 100 : 0;
+            const pct = Math.min(Math.round(raw), 100);
+            const left = limit - used;
+            return `
+                <div class="budget-item">
+                    <div class="meter-top">
+                        <span class="meter-name">${escapeHtml(cat)}</span>
+                        <span class="meter-num">${formatCurrency(used)} / ${formatCurrency(limit)}
+                            <button type="button" class="row-btn" aria-label="Remove budget" onclick="window.deleteBudget('${escapeHtml(cat)}')"><i class="fa-solid fa-trash-can"></i></button>
+                        </span>
                     </div>
-                </div>
-                <div class="progress-bar-container"><div class="progress-bar-fill" style="width: ${pct}%"></div></div>
-            `;
-            budgetFullList.appendChild(item);
-        });
+                    <div class="bar"><i class="${meterClass(raw)}" style="width:${pct}%"></i></div>
+                    <small class="${left < 0 ? 'text-neg' : 'text-muted'}">${left < 0 ? formatCurrency(-left) + ' over' : formatCurrency(left) + ' left'}</small>
+                </div>`;
+        }).join('');
     }
 
     function renderSavingsGoals() {
         if (!savingsCardsContainer) return;
-        savingsCardsContainer.innerHTML = '';
         if (state.savingsGoals.length === 0) {
-            savingsCardsContainer.innerHTML = `<p class="text-muted text-center py-4">No savings goals.</p>`;
+            savingsCardsContainer.innerHTML = '<div class="card"><p class="empty">No goals yet</p></div>';
             return;
         }
-        state.savingsGoals.forEach(g => {
-            const pct = Math.min(Math.round((g.current / g.target) * 100), 100);
-            const card = document.createElement('div');
-            card.className = 'savings-goal-card';
-            card.innerHTML = `
-                <div class="goal-card-top">
-                    <h3 class="goal-title">${escapeHtml(g.name)}</h3>
-                    <button class="action-btn delete-btn" onclick="window.deleteGoal('${g.id}')"><i class="fa-solid fa-trash-can"></i></button>
-                </div>
-                <div class="budget-card-info"><span class="goal-amounts">${formatCurrency(g.current)}</span><span>Target: ${formatCurrency(g.target)}</span></div>
-                <div class="progress-bar-container"><div class="progress-bar-fill" style="width: ${pct}%"></div></div>
-                <div class="text-right mt-2"><button class="btn btn-primary btn-small" onclick="window.openAddFundsModal('${g.id}', '${escapeHtml(g.name)}')">Add Funds</button></div>
-            `;
-            savingsCardsContainer.appendChild(card);
-        });
+        savingsCardsContainer.innerHTML = state.savingsGoals.map(g => {
+            const pct = g.target > 0 ? Math.min(Math.round((g.current / g.target) * 100), 100) : 0;
+            const when = /^\d{4}-\d{2}-\d{2}$/.test(g.date || '') ? 'By ' + formatShortDate(g.date) : '';
+            return `
+                <div class="card goal-card">
+                    <div class="goal-top">
+                        <div>
+                            <div class="goal-title">${escapeHtml(g.name)}</div>
+                            ${when ? `<div class="goal-sub">${when}</div>` : ''}
+                        </div>
+                        <button type="button" class="row-btn" aria-label="Delete goal" onclick="window.deleteGoal('${escapeHtml(String(g.id))}')"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                    <div class="goal-nums"><b>${formatCurrency(g.current)}</b><span>of ${formatCurrency(g.target)} \u00b7 ${pct}%</span></div>
+                    <div class="bar"><i class="${pct >= 100 ? 'pos' : ''}" style="width:${pct}%"></i></div>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="window.openAddFundsModal('${escapeHtml(String(g.id))}')">Add money</button>
+                </div>`;
+        }).join('');
     }
 
     function renderProjections() {
@@ -1130,55 +1164,55 @@ document.addEventListener('DOMContentLoaded', () => {
         const weeks = state.projection.weeks || 16;
         const bulk = state.projection.bulk || 4000;
         const safety = state.projection.safety || 300;
-        const spendable = bulk - safety;
-        const weeklyAllowance = spendable / weeks;
+        const weeklyAllowance = (bulk - safety) / weeks;
 
         projectionResults.innerHTML = `
-            <div class="allowance-highlight-box">
-                <span class="text-muted font-weight-bold">Recommended Weekly Allowance</span>
-                <div class="allowance-amount">${formatCurrency(weeklyAllowance)}</div>
-            </div>
-        `;
+            <div class="plan-result">
+                <span>You can spend about</span>
+                <strong>${formatCurrency(weeklyAllowance)}</strong>
+                <span>each week</span>
+            </div>`;
+
+        const fill = (id, val) => {
+            const el = document.getElementById(id);
+            if (el && document.activeElement !== el) el.value = val;
+        };
+        fill('semesterWeeks', weeks);
+        fill('bulkIncome', state.projection.bulk || '');
+        fill('savingsSafety', state.projection.safety != null ? state.projection.safety : 500);
     }
 
     window.deleteTransaction = function(id) {
-        showConfirmDialog('Delete Transaction', 'Are you sure you want to delete this transaction?', async () => {
-            if (currentUser) {
-                await db.collection('users').doc(currentUser.uid).collection('transactions').doc(id).delete();
-            } else {
-                state.transactions = state.transactions.filter(t => t.id !== id);
-                renderAll();
-            }
-            showToast('Transaction deleted.', 'success');
+        if (window.EduUI.gate('Sign up to manage your own transactions.')) return;
+        showConfirmDialog('Delete transaction', 'This cannot be undone.', async () => {
+            await db.collection('users').doc(currentUser.uid).collection('transactions').doc(id).delete();
+            showToast('Deleted', 'success');
         });
     };
 
     window.deleteBudget = function(cat) {
-        showConfirmDialog('Remove Budget', `Are you sure you want to remove the budget limit for ${cat}?`, async () => {
+        if (window.EduUI.gate('Sign up to set your own budgets.')) return;
+        showConfirmDialog('Remove budget', `Remove the limit for ${cat}?`, async () => {
             delete state.budgets[cat];
-            if (currentUser) {
-                await db.collection('users').doc(currentUser.uid).collection('settings').doc('budgets').set({ categories: state.budgets });
-            }
+            await db.collection('users').doc(currentUser.uid).collection('settings').doc('budgets').set({ categories: state.budgets });
             renderAll();
-            showToast('Budget removed.', 'success');
+            showToast('Budget removed', 'success');
         });
     };
 
     window.deleteGoal = function(id) {
-        showConfirmDialog('Delete Savings Goal', 'Are you sure you want to delete this savings goal?', async () => {
-            if (currentUser) {
-                await db.collection('users').doc(currentUser.uid).collection('savingsGoals').doc(id).delete();
-            } else {
-                state.savingsGoals = state.savingsGoals.filter(g => g.id !== id);
-                renderAll();
-            }
-            showToast('Goal deleted.', 'success');
+        if (window.EduUI.gate('Sign up to track your own goals.')) return;
+        showConfirmDialog('Delete goal', 'This cannot be undone.', async () => {
+            await db.collection('users').doc(currentUser.uid).collection('savingsGoals').doc(id).delete();
+            showToast('Goal deleted', 'success');
         });
     };
 
     window.openAddFundsModal = function(id, name) {
+        if (window.EduUI.gate('Sign up to add money to your own goals.')) return;
+        const goal = state.savingsGoals.find(g => g.id === id);
         document.getElementById('modalGoalId').value = id;
-        document.getElementById('modalGoalName').value = name;
+        document.getElementById('modalGoalName').value = name || (goal ? goal.name : '');
         document.getElementById('fundAmount').value = '';
         addFundsModal.classList.add('show');
     };
@@ -1191,232 +1225,259 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!toastMessage) return;
         toastMessage.textContent = message;
         toastNotification.className = `toast ${type === 'error' ? 'toast-error' : type === 'success' ? 'toast-success' : ''}`;
-        
+
         const iconEl = toastNotification.querySelector('.toast-icon i');
         if (iconEl) {
             iconEl.className = type === 'error' ? 'fa-solid fa-circle-exclamation' : type === 'success' ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-info';
         }
 
         toastNotification.classList.add('show');
-        setTimeout(() => toastNotification.classList.remove('show'), 3500);
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(() => toastNotification.classList.remove('show'), 3000);
     }
 
     function escapeHtml(str) {
-        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        return String(str == null ? '' : str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    // ---------- Insights hub: tiles open their panel in a sheet ----------
+    const panelSheet = document.getElementById('panelSheet');
+    const panelBody = document.getElementById('panelSheetBody');
+    const panelTitle = document.getElementById('panelSheetTitle');
+    const insightStore = document.getElementById('insightStore');
+    let openPanelEl = null;
+    const aiCache = {};
+
+    function returnPanel() {
+        if (openPanelEl && insightStore) { insightStore.appendChild(openPanelEl); }
+        openPanelEl = null;
+    }
+
+    function openPanel(key) {
+        const panel = document.getElementById('panel-' + key);
+        if (!panel) return;
+        returnPanel();
+        panelTitle.textContent = panel.dataset.title || '';
+        panelBody.appendChild(panel);
+        openPanelEl = panel;
+        window.EduUI.open(panelSheet);
+        panelBody.scrollTop = 0;
+        if (key === 'review') loadAiReview();
+    }
+    window.EduUI.onClose((except) => { if (except !== panelSheet) returnPanel(); });
+
+    function loadAiReview() {
+        if (!currentUser || typeof getGeminiFinancialAdvice !== 'function') return;
+        const autopsy = new FinancialAnalyzer(state).generateMonthlyAutopsy();
+        const key = JSON.stringify(autopsy);
+        if (aiCache[key]) return;
+        getGeminiFinancialAdvice(autopsy).then(advice => {
+            if (!advice) return;
+            aiCache[key] = advice;
+            const el = document.getElementById('aiAutopsyText');
+            if (el) el.textContent = advice;
+        });
+    }
+
+    function callout(cls, title, text, small) {
+        return `<div class="callout ${cls || ''}">${title ? `<strong>${escapeHtml(title)}</strong>` : ''}${escapeHtml(text)}${small ? `<small>${escapeHtml(small)}</small>` : ''}</div>`;
+    }
+
+    function monthLabel(key) {
+        const [y, m] = key.split('-').map(Number);
+        return new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
     }
 
     function renderIntelligenceTab() {
-        const analyzer = new FinancialAnalyzer(state);
+        const A = new FinancialAnalyzer(state);
+        const fmt = (n) => A.formatCurrency(n);
+        const setSub = (key, text, cls) => {
+            const el = document.querySelector('[data-sub="' + key + '"]');
+            if (el) { el.textContent = text; el.className = 'tile-sub' + (cls ? ' ' + cls : ''); }
+        };
+        const setBox = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
 
-        const profile = analyzer.calculateBehaviorProfile();
+        // Spending style + achievements
+        const profile = A.calculateBehaviorProfile();
         const titleEl = document.getElementById('profileTitleDisplay');
         const descEl = document.getElementById('profileDescDisplay');
         if (titleEl) titleEl.textContent = profile.profileTitle;
         if (descEl) descEl.textContent = profile.description;
+        const streaks = A.calculateFinancialStreaks();
+        setBox('financialStreaksList', streaks.map(s => `
+            <div class="list-item"><i class="fa-solid fa-award text-pos"></i>
+                <div class="li-main"><strong>${escapeHtml(s.title)}</strong><small>${escapeHtml(s.description)}</small></div></div>`).join(''));
+        setSub('style', profile.profileTitle);
 
-        const streaksList = document.getElementById('financialStreaksList');
-        if (streaksList) {
-            streaksList.innerHTML = '';
-            const streaks = analyzer.calculateFinancialStreaks();
-            if (streaks.length === 0) {
-                streaksList.innerHTML = `<p class="text-muted" style="font-size: 0.85rem;">Complete budgets or savings goals to unlock financial achievements.</p>`;
-            } else {
-                streaks.forEach(s => {
-                    const div = document.createElement('div');
-                    div.style.cssText = "display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--bg-input); border-radius: 8px; border: 1px solid var(--border-color);";
-                    div.innerHTML = `<i class="fa-solid fa-award text-success" style="font-size: 1.2rem;"></i><div><strong>${escapeHtml(s.title)}</strong><br><small class="text-muted">${escapeHtml(s.description)}</small></div>`;
-                    streaksList.appendChild(div);
-                });
-            }
-        }
+        // Pace + leaks
+        const sp = A.calculateSpendingSpeedometer();
+        const paceTone = sp.statusType === 'warning' ? 'warn' : sp.statusType === 'success' ? 'pos' : '';
+        const leaksData = A.detectSpendingLeaks();
+        const leaks = leaksData.hasData ? leaksData.leaks : [];
+        setBox('speedometerBox', `
+            <div class="pace">
+                <div class="pace-row"><div><span>Month passed</span><b>${sp.monthElapsedPct}%</b></div><div class="bar"><i style="width:${sp.monthElapsedPct}%"></i></div></div>
+                <div class="pace-row"><div><span>Money spent</span><b>${sp.moneySpentPct}%</b></div><div class="bar"><i class="${paceTone === 'warn' ? 'warn' : paceTone === 'pos' ? 'pos' : ''}" style="width:${sp.moneySpentPct}%"></i></div></div>
+                ${callout(paceTone, '', sp.statusMessage)}
+            </div>`);
+        setBox('leaksBox', leaks.map(l => callout('', l.title, l.description)).join(''));
+        setSub('pace', `Spent ${sp.moneySpentPct}% \u00b7 month ${sp.monthElapsedPct}%`, paceTone === 'warn' ? 'warn' : paceTone === 'pos' ? 'pos' : '');
 
-        const speed = analyzer.calculateSpendingSpeedometer();
-        const speedBox = document.getElementById('speedometerBox');
-        if (speedBox) {
-            speedBox.innerHTML = `
-                <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 6px;">Month Elapsed: ${speed.monthElapsedPct}% | Spent: ${speed.moneySpentPct}%</div>
-                <p style="font-size: 0.9rem;" class="${speed.statusType === 'warning' ? 'text-danger' : speed.statusType === 'success' ? 'text-success' : 'text-muted'}">${escapeHtml(speed.statusMessage)}</p>
-            `;
-        }
+        // Forecast
+        const pred = A.predictFutureBalance();
+        setBox('futurePredictionBox', `
+            <div class="big-figure"><span>Expected at month end</span><b>${fmt(pred.projectedEndMonthBalance)}</b><small>${pred.daysRemaining} days left</small></div>
+            <div class="mini-grid" style="margin-top:12px">
+                <div class="mini"><span>Balance now</span><b>${fmt(pred.currentBalance)}</b></div>
+                <div class="mini"><span>Daily spending</span><b>${fmt(pred.dailyBurnRate)}</b></div>
+            </div>`);
+        setSub('forecast', fmt(pred.projectedEndMonthBalance), pred.projectedEndMonthBalance >= 0 ? 'pos' : 'neg');
 
-        const leaksBox = document.getElementById('leaksBox');
-        if (leaksBox) {
-            leaksBox.innerHTML = '';
-            const leaksData = analyzer.detectSpendingLeaks();
-            if (!leaksData.hasData || leaksData.leaks.length === 0) {
-                leaksBox.innerHTML = `<p class="text-muted" style="font-size: 0.85rem;">No spending leaks detected.</p>`;
-            } else {
-                leaksData.leaks.forEach(l => {
-                    const div = document.createElement('div');
-                    div.style.cssText = "padding: 10px; background: var(--danger-light); border-radius: 8px; border: 1px solid var(--danger); font-size: 0.85rem;";
-                    div.innerHTML = `<strong><i class="fa-solid fa-triangle-exclamation"></i> ${escapeHtml(l.title)}</strong><p class="text-muted" style="margin-top: 4px;">${escapeHtml(l.description)}</p>`;
-                    leaksBox.appendChild(div);
-                });
-            }
-        }
+        // Unusual spending
+        const unusual = A.detectUnusualPurchases();
+        const unusualList = unusual.hasData ? unusual.unusual : [];
+        setBox('unusualPurchasesBox', unusualList.length ? unusualList.map(u => `
+            <div class="list-item"><div class="li-main"><strong>${escapeHtml(u.description)}</strong><small>${escapeHtml(u.reason)}</small></div>
+            <span class="li-end">${fmt(u.amount)}</span></div>`).join('') : '<p class="empty">Nothing unusual</p>');
+        setSub('unusual', unusualList.length ? `${unusualList.length} flagged` : 'All clear', unusualList.length ? 'warn' : 'pos');
 
-        const pred = analyzer.predictFutureBalance();
-        const predBox = document.getElementById('futurePredictionBox');
-        if (predBox) {
-            predBox.innerHTML = `
-                <div class="allowance-highlight-box">
-                    <span class="text-muted font-weight-bold">Projected Month-End Balance</span>
-                    <div class="allowance-amount">${analyzer.formatCurrency(pred.projectedEndMonthBalance)}</div>
-                    <small class="text-muted">Current: ${analyzer.formatCurrency(pred.currentBalance)} | Est. Daily Burn: ${analyzer.formatCurrency(pred.dailyBurnRate)}</small>
-                </div>
-                <p class="text-muted" style="font-size: 0.8rem; text-align: center;">*Estimate based on historical spending rate and remaining days in month.</p>
-            `;
-        }
+        // Tools
+        setSub('afford', 'Check a purchase');
+        setSub('whatif', 'Test a change');
 
-        const collisionsBox = document.getElementById('goalCollisionsBox');
-        if (collisionsBox) {
-            collisionsBox.innerHTML = '';
-            const collisions = analyzer.detectGoalCollisions();
-            if (collisions.length === 0) {
-                collisionsBox.innerHTML = `<p class="text-muted" style="font-size: 0.85rem;">No goal collisions detected. Your savings goals fit within your projected cashflow.</p>`;
-            } else {
-                collisions.forEach(c => {
-                    const div = document.createElement('div');
-                    div.style.cssText = "padding: 10px; background: var(--warning-light); border-radius: 8px; border: 1px solid var(--warning); font-size: 0.85rem;";
-                    div.innerHTML = `<strong><i class="fa-solid fa-triangle-exclamation text-warning"></i> Goal Risk: ${escapeHtml(c.goalName)}</strong><p class="text-muted" style="margin-top: 4px;">${escapeHtml(c.warning)}</p>`;
-                    collisionsBox.appendChild(div);
-                });
-            }
-        }
+        // Goal risks
+        const collisions = A.detectGoalCollisions();
+        setBox('goalCollisionsBox', collisions.length ? collisions.map(c => callout('warn', c.goalName, c.warning)).join('')
+            : callout('pos', '', 'Your goals fit your expected cashflow.'));
+        setSub('collide', collisions.length ? `${collisions.length} at risk` : 'All clear', collisions.length ? 'neg' : 'pos');
 
-        const unusualBox = document.getElementById('unusualPurchasesBox');
-        if (unusualBox) {
-            unusualBox.innerHTML = '';
-            const unusual = analyzer.detectUnusualPurchases();
-            if (!unusual.hasData || unusual.unusual.length === 0) {
-                unusualBox.innerHTML = `<p class="text-muted" style="font-size: 0.85rem;">No unusual or impulse purchases detected.</p>`;
-            } else {
-                unusual.unusual.forEach(u => {
-                    const div = document.createElement('div');
-                    div.style.cssText = "padding: 8px; background: var(--bg-input); border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.85rem;";
-                    div.innerHTML = `<strong>${escapeHtml(u.description)} (${analyzer.formatCurrency(u.amount)})</strong><br><small class="text-muted">${escapeHtml(u.reason)}</small>`;
-                    unusualBox.appendChild(div);
-                });
-            }
-        }
+        // Recurring
+        const rec = A.discoverRecurringExpenses();
+        setBox('recurringExpensesBox', rec.length ? `
+            <div class="table-wrap"><table class="table compact">
+                <thead><tr><th>Item</th><th>Category</th><th class="amt">Amount</th><th class="amt">Times</th><th class="act"><span class="sr-only">Confirm</span></th></tr></thead>
+                <tbody>${rec.map(r => `<tr>
+                    <td><strong>${escapeHtml(r.description)}</strong></td>
+                    <td>${escapeHtml(r.category)}</td>
+                    <td class="amt">${fmt(r.amount)}</td>
+                    <td class="amt">${r.occurrences}</td>
+                    <td class="acts"><button type="button" class="btn btn-ghost btn-sm" onclick="window.confirmRecurring('${escapeHtml(r.description).replace(/&#039;/g, '')}', '', ${Number(r.amount) || 0})">Confirm</button></td>
+                </tr>`).join('')}</tbody></table></div>` : '<p class="empty">None found yet</p>');
+        setSub('recurring', rec.length ? `${rec.length} found` : 'None yet');
 
-        const recurringBox = document.getElementById('recurringExpensesBox');
-        if (recurringBox) {
-            recurringBox.innerHTML = '';
-            const rec = analyzer.discoverRecurringExpenses();
-            if (rec.length === 0) {
-                recurringBox.innerHTML = `<p class="text-muted" style="font-size: 0.85rem;">No recurring expenses detected yet.</p>`;
-            } else {
-                rec.forEach(r => {
-                    const div = document.createElement('div');
-                    div.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--bg-input); border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.85rem;";
-                    div.innerHTML = `<div><strong>${escapeHtml(r.description)}</strong><br><small class="text-muted">${escapeHtml(r.category)} • ${analyzer.formatCurrency(r.amount)} (${r.occurrences}x)</small></div><button class="btn btn-primary btn-small" onclick="window.confirmRecurring('${escapeHtml(r.description)}', '${escapeHtml(r.category)}', ${r.amount})">Confirm</button>`;
-                    recurringBox.appendChild(div);
-                });
-            }
-        }
+        // Past months
+        const periods = A.getTimeMachinePeriods();
+        setBox('timeMachineBox', periods.length ? `
+            <div class="table-wrap"><table class="table compact">
+                <thead><tr><th>Month</th><th class="amt">Income</th><th class="amt">Spent</th><th class="amt">Net</th></tr></thead>
+                <tbody>${periods.map(p => `<tr>
+                    <td><strong>${monthLabel(p.period)}</strong></td>
+                    <td class="amt text-pos">${fmt(p.income)}</td>
+                    <td class="amt text-neg">${fmt(p.expense)}</td>
+                    <td class="amt ${p.net >= 0 ? 'text-pos' : 'text-neg'}">${fmt(p.net)}</td>
+                </tr>`).join('')}</tbody></table></div>` : '<p class="empty">No history yet</p>');
+        setSub('history', periods.length ? `${periods.length} ${periods.length === 1 ? 'month' : 'months'}` : 'No history');
 
-        const timeBox = document.getElementById('timeMachineBox');
-        if (timeBox) {
-            timeBox.innerHTML = '';
-            const periods = analyzer.getTimeMachinePeriods();
-            if (periods.length === 0) {
-                timeBox.innerHTML = `<p class="text-muted" style="font-size: 0.85rem;">No historical periods available.</p>`;
-            } else {
-                periods.forEach(p => {
-                    const div = document.createElement('div');
-                    div.style.cssText = "padding: 8px; background: var(--bg-input); border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.85rem;";
-                    div.innerHTML = `<strong>Period: ${p.period}</strong><br><span class="text-success">Income: ${analyzer.formatCurrency(p.income)}</span> | <span class="text-danger">Expense: ${analyzer.formatCurrency(p.expense)}</span><br><small class="text-muted">${escapeHtml(p.summaryText)}</small>`;
-                    timeBox.appendChild(div);
-                });
-            }
-        }
+        // Why more
+        const why = A.explainSpendingIncrease();
+        setBox('whySpendMoreBox', callout(why.hasComparison && why.expenseDiff > 0 ? 'warn' : '', '', why.explanation));
+        setSub('why', why.hasComparison ? `${why.expenseDiff > 0 ? '+' : '\u2212'}${Math.abs(why.percentChange)}% vs last month` : 'Needs 2 months',
+            why.hasComparison ? (why.expenseDiff > 0 ? 'warn' : 'pos') : '');
 
-        const whyBox = document.getElementById('whySpendMoreBox');
-        if (whyBox) {
-            const why = analyzer.explainSpendingIncrease();
-            whyBox.innerHTML = `<p style="font-size: 0.9rem; line-height: 1.5;">${escapeHtml(why.explanation)}</p>`;
-        }
+        // Smart budgets
+        const suggestions = A.generateSmartBudgets();
+        setBox('smartBudgetsBox', suggestions.length ? `
+            <div class="table-wrap"><table class="table compact">
+                <thead><tr><th>Category</th><th class="amt">Average</th><th class="amt">Suggested</th><th class="act"><span class="sr-only">Actions</span></th></tr></thead>
+                <tbody>${suggestions.map(s => `<tr>
+                    <td><strong>${escapeHtml(s.category)}</strong></td>
+                    <td class="amt">${fmt(s.currentAverage)}</td>
+                    <td class="amt text-pos">${fmt(s.suggestedLimit)}</td>
+                    <td class="acts">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="window.acceptSmartBudget('${escapeHtml(s.category)}', ${Number(s.suggestedLimit)})">Accept</button>
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="window.editSmartBudget('${escapeHtml(s.category)}', ${Number(s.suggestedLimit)})">Edit</button>
+                    </td>
+                </tr>`).join('')}</tbody></table></div>` : '<p class="empty">Add more expenses first</p>');
+        setSub('smart', suggestions.length ? `${suggestions.length} ${suggestions.length === 1 ? 'idea' : 'ideas'}` : 'Needs history');
 
-        const smartBudgetsBox = document.getElementById('smartBudgetsBox');
-        if (smartBudgetsBox) {
-            smartBudgetsBox.innerHTML = '';
-            const suggestions = analyzer.generateSmartBudgets();
-            if (suggestions.length === 0) {
-                smartBudgetsBox.innerHTML = `<p class="text-muted">Insufficient expense history to generate smart budget suggestions.</p>`;
-            } else {
-                suggestions.forEach(s => {
-                    const card = document.createElement('div');
-                    card.style.cssText = "background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px;";
-                    card.innerHTML = `
-                        <div style="font-weight: 700; font-size: 0.95rem;">${escapeHtml(s.category)}</div>
-                        <div style="font-size: 0.85rem;" class="text-muted">Suggested Limit: <strong class="text-primary">${analyzer.formatCurrency(s.suggestedLimit)}</strong> (Avg spent: ${analyzer.formatCurrency(s.currentAverage)})</div>
-                        <div style="display: flex; gap: 8px; margin-top: 4px;">
-                            <button class="btn btn-success btn-small flex-1" onclick="window.acceptSmartBudget('${escapeHtml(s.category)}', ${s.suggestedLimit})">Accept</button>
-                            <button class="btn btn-secondary-outline btn-small flex-1" onclick="window.editSmartBudget('${escapeHtml(s.category)}', ${s.suggestedLimit})">Edit</button>
-                        </div>
-                    `;
-                    smartBudgetsBox.appendChild(card);
-                });
-            }
-        }
+        // Monthly review
+        const autopsy = A.generateMonthlyAutopsy();
+        const key = JSON.stringify(autopsy);
+        setBox('monthlyAutopsyBox', `
+            <div class="mini-grid" style="margin-bottom:12px">
+                <div class="mini"><span>Biggest leak</span><b>${escapeHtml(autopsy.biggestLeak)}</b></div>
+                <div class="mini"><span>Spending style</span><b>${escapeHtml(autopsy.behaviorProfile)}</b></div>
+                <div class="mini wide"><span>Expected at month end</span><b class="${autopsy.projectedMonthEnd >= 0 ? 'text-pos' : 'text-neg'}">${fmt(autopsy.projectedMonthEnd)}</b></div>
+            </div>
+            <div class="callout brand" id="aiAutopsyText">${escapeHtml(aiCache[key] || autopsy.summary)}</div>`);
+        setSub('review', autopsy.biggestLeak && autopsy.biggestLeak !== 'None' ? 'Top leak: ' + autopsy.biggestLeak : 'This month');
+    }
 
-        const autopsyBox = document.getElementById('monthlyAutopsyBox');
-        if (autopsyBox) {
-            const autopsy = analyzer.generateMonthlyAutopsy();
-            autopsyBox.innerHTML = `
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 12px;">
-                    <div style="padding: 10px; background: var(--bg-input); border-radius: 8px; border: 1px solid var(--border-color);">
-                        <span class="text-muted" style="font-size: 0.8rem;">Biggest Leak</span>
-                        <div style="font-weight: 700; font-size: 1rem;">${escapeHtml(autopsy.biggestLeak)}</div>
-                    </div>
-                    <div style="padding: 10px; background: var(--bg-input); border-radius: 8px; border: 1px solid var(--border-color);">
-                        <span class="text-muted" style="font-size: 0.8rem;">Behavior Profile</span>
-                        <div style="font-weight: 700; font-size: 1rem;" class="text-primary">${escapeHtml(autopsy.behaviorProfile)}</div>
-                    </div>
-                    <div style="padding: 10px; background: var(--bg-input); border-radius: 8px; border: 1px solid var(--border-color);">
-                        <span class="text-muted" style="font-size: 0.8rem;">Projected Month-End</span>
-                        <div style="font-weight: 700; font-size: 1rem;" class="text-success">${analyzer.formatCurrency(autopsy.projectedMonthEnd)}</div>
-                    </div>
-                </div>
-                <div style="padding: 14px; background: var(--primary-light); border: 1px solid var(--primary); border-radius: 10px;">
-                    <strong style="display: block; margin-bottom: 6px;"><i class="fa-solid fa-wand-magic-sparkles text-primary"></i> Monthly Financial Review & Autopsy</strong>
-                    <p style="font-size: 0.9rem; line-height: 1.6;" id="aiAutopsyText">${escapeHtml(autopsy.summary)}</p>
-                </div>
-            `;
+    // ---------- Small UI behaviours ----------
+    function openFold(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('open');
+    }
+    function closeFold(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('open');
+    }
 
-            // Fetch Gemini AI review (using key stored in code for testing, prior to backend migration)
-            getGeminiFinancialAdvice(autopsy).then(advice => {
-                if (advice) {
-                    const txtEl = document.getElementById('aiAutopsyText');
-                    if (txtEl) txtEl.textContent = advice;
-                }
-            });
-        }
+    function setupExtraListeners() {
+        // Add / New buttons that reveal a form on phones
+        document.querySelectorAll('.fold-btn').forEach(btn => btn.addEventListener('click', () => {
+            const target = document.getElementById(btn.dataset.fold);
+            if (target) target.classList.toggle('open');
+        }));
+
+        // Transactions filters
+        const filterToggle = document.getElementById('filterToggle');
+        const filterPanel = document.getElementById('filterPanel');
+        if (filterToggle && filterPanel) filterToggle.addEventListener('click', () => filterPanel.classList.toggle('open'));
+        [exportStartDate, exportEndDate].forEach(el => el && el.addEventListener('change', renderAllTransactions));
+        const clear = document.getElementById('clearFilters');
+        if (clear) clear.addEventListener('click', () => {
+            if (searchTransInput) searchTransInput.value = '';
+            if (filterCategorySelect) filterCategorySelect.value = 'all';
+            if (filterTypeSelect) filterTypeSelect.value = 'all';
+            if (sortTransSelect) sortTransSelect.value = 'date-desc';
+            if (exportStartDate) exportStartDate.value = '';
+            if (exportEndDate) exportEndDate.value = '';
+            renderAllTransactions();
+        });
+
+        // Expense / Income switch in the add form
+        document.querySelectorAll('#transTypeSeg .seg-btn').forEach(btn => btn.addEventListener('click', () => {
+            document.querySelectorAll('#transTypeSeg .seg-btn').forEach(b => b.classList.toggle('active', b === btn));
+            transTypeSelect.value = btn.dataset.type;
+            populateCategories();
+        }));
+
+        // Insight tiles
+        document.querySelectorAll('.tile[data-panel]').forEach(tile => tile.addEventListener('click', () => openPanel(tile.dataset.panel)));
     }
 
     window.acceptSmartBudget = async function(cat, limit) {
+        if (window.EduUI.gate('Sign up to set your own budgets.')) return;
         state.budgets[cat] = limit;
-        if (currentUser) {
-            await db.collection('users').doc(currentUser.uid).collection('settings').doc('budgets').set({
-                categories: state.budgets
-            }, { merge: true });
-        }
+        await db.collection('users').doc(currentUser.uid).collection('settings').doc('budgets').set({
+            categories: state.budgets
+        }, { merge: true });
         renderAll();
-        showToast(`Smart budget accepted for ${cat}!`, 'success');
+        showToast(`Budget set for ${cat}`, 'success');
     };
 
     window.editSmartBudget = function(cat, limit) {
         switchTab('budgets');
+        openFold('budgetFormCard');
         const budgetCatSelect = document.getElementById('budgetCategory');
         const budgetLimitInput = document.getElementById('budgetLimit');
         if (budgetCatSelect) budgetCatSelect.value = cat;
         if (budgetLimitInput) budgetLimitInput.value = limit;
-        showToast(`Loaded ${cat} into Budget tab for editing.`, 'info');
     };
 
     window.confirmRecurring = function(desc, cat, amount) {
-        showToast(`Confirmed recurring expense: ${desc} (${formatCurrency(amount)})`, 'success');
+        showToast(`Confirmed: ${desc} (${formatCurrency(amount)})`, 'success');
     };
 
     init();
