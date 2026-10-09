@@ -35,6 +35,7 @@
     // Arrived from admin.html without admin access
     if (new URLSearchParams(location.search).get('error') === 'unauthorized') {
         showError('This account does not have admin access. Please sign in with an admin account.');
+        try { history.replaceState(null, '', location.pathname); } catch (e) { /* ignore */ }
     }
 
     // Already signed in as an admin -> straight to the dashboard

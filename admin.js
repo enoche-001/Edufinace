@@ -41,7 +41,8 @@
         loading: false,
         analytics: null,
         logs: [],
-        chart: null
+        chart: null,
+        catChart: null
     };
     const unsubs = [];
     let booted = false;
@@ -93,19 +94,20 @@
     }
 
     // ---------- Auth guard ----------
-    function deny() {
+    function deny(signedIn) {
         unsubs.forEach((u) => { try { u(); } catch (e) { /* ignore */ } });
-        window.location.replace('admin-login.html?error=unauthorized');
+        // Only show the "no admin access" message to someone who actually signed in.
+        window.location.replace(signedIn ? 'admin-login.html?error=unauthorized' : 'admin-login.html');
     }
 
     auth.onAuthStateChanged(async (user) => {
-        if (!user) return deny();
+        if (!user) return deny(false);
         try {
             // Same check the Firestore rules use: a doc at admins/{uid}.
             const snap = await db.collection('admins').doc(user.uid).get();
-            if (!snap.exists) return deny();
+            if (!snap.exists) return deny(true);
         } catch (e) {
-            return deny();
+            return deny(true);
         }
         if (booted) return;
         booted = true;
@@ -124,6 +126,10 @@
         } else {
             av.textContent = initials(name);
         }
+
+        $('greetName').textContent = name.split(' ')[0];
+        $('topAvatar').innerHTML = S.admin.photoURL ? '<img alt="" referrerpolicy="no-referrer" src="' + esc(S.admin.photoURL) + '">' : esc(initials(name));
+        $('dateChip').textContent = 'Today, ' + new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
 
         document.body.classList.remove('checking');
         log('ok', 'Admin session started for ' + (S.admin.email || S.admin.uid));
@@ -300,13 +306,25 @@
     function renderKpis() {
         // Tickets (live)
         const open = openTickets().length;
-        $('kpiTickets').textContent = fmtInt(open) + ' Open';
+        $('kpiTickets').textContent = fmtInt(open);
         $('kpiTicketsSub').textContent = S.tickets.length ? 'of ' + fmtInt(S.tickets.length) + ' total' : 'awaiting response';
         [['bellBadge', open], ['navTicketCount', open]].forEach(([id, n]) => {
             const el = $(id);
             el.hidden = n === 0;
             el.textContent = n > 99 ? '99+' : n;
         });
+
+        // Support status cards + overview stat card
+        const replied = S.tickets.filter((t) => t.status !== 'resolved' && t.replies && t.replies.length).length;
+        const fresh = open - replied;
+        $('cntAll').textContent = fmtInt(S.tickets.length);
+        $('cntOpen').textContent = fmtInt(fresh);
+        $('cntReplied').textContent = fmtInt(replied);
+        $('cntResolved').textContent = fmtInt(S.tickets.length - open);
+        $('statTicketsBig').textContent = fmtInt(open);
+        $('statTicketsSub').innerHTML = open
+            ? (fresh ? '<b>' + fmtInt(fresh) + '</b> awaiting a first reply.' : 'All replied. Resolve them when done.')
+            : 'Nothing pending. Nice work!';
 
         // Subscribers (live)
         const activeSubs = S.subs.filter((s) => s.active !== false).length;
@@ -317,6 +335,10 @@
         const A = S.analytics;
         if (!A) return;
         $('kpiStudents').textContent = fmtInt(A.active30);
+        $('statStudentsBig').textContent = fmtInt(S.students.length);
+        const idle = S.students.filter(isInactive).length;
+        $('statStudentsSub').innerHTML = S.students.length ? '<b>' + fmtInt(idle) + '</b> inactive for ' + INACTIVE_DAYS + '+ days.' : 'No students yet.';
+        $('updatedAt').textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const delta = $('kpiStudentsDelta');
         if (A.activePrev30 === 0) {
             delta.textContent = A.active30 > 0 ? 'New' : '0%';
@@ -326,7 +348,7 @@
             delta.textContent = (pct > 0 ? '+' : '') + pct + '%';
             delta.className = 'pill ' + (pct > 0 ? 'pill-up' : pct < 0 ? 'pill-down' : 'pill-flat');
         }
-        $('kpiStudentsSub').textContent = 'of ' + fmtInt(S.students.length) + ' registered · last 30 days';
+        $('kpiStudentsSub').textContent = 'of ' + fmtInt(S.students.length) + ' · last 30 days';
 
         const curs = Object.keys(A.volume).sort((a, b) => A.volume[b] - A.volume[a]);
         if (curs.length) {
@@ -355,44 +377,70 @@
                 S.chart.update();
             } else {
                 S.chart = new Chart($('usageChart'), {
+                    type: 'bar',
                     data: {
                         labels,
                         datasets: [
-                            { type: 'line', label: 'Monthly active students', data: A.actives, borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,0.12)', fill: true, tension: 0.35, borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#10B981', order: 1 },
-                            { type: 'bar', label: 'New sign-ups', data: A.signups, backgroundColor: 'rgba(37,99,235,0.75)', borderRadius: 6, maxBarThickness: 34, order: 2 }
+                            { label: 'Active students', data: A.actives, backgroundColor: '#4318FF', borderRadius: 8, borderSkipped: false, maxBarThickness: 26 },
+                            { label: 'New sign-ups', data: A.signups, backgroundColor: '#05CD99', borderRadius: 8, borderSkipped: false, maxBarThickness: 26 }
                         ]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         interaction: { mode: 'index', intersect: false },
-                        plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { family: 'Inter' } } } },
+                        plugins: {
+                            legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8, color: '#707EAE', font: { family: 'Plus Jakarta Sans', weight: '600' } } },
+                            tooltip: { backgroundColor: '#1B2559', padding: 10, cornerRadius: 10 }
+                        },
                         scales: {
-                            y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#E2E8F0' } },
-                            x: { grid: { display: false } }
+                            y: { beginAtZero: true, border: { display: false }, ticks: { precision: 0, color: '#707EAE' }, grid: { color: '#EEF1F9' } },
+                            x: { grid: { display: false }, border: { display: false }, ticks: { color: '#707EAE' } }
                         }
                     }
                 });
             }
         }
 
-        // Category breakdown (dominant currency, expenses only)
+        // Category donut (dominant currency, expenses only)
+        const COLORS = ['#4318FF', '#05CD99', '#FFB547', '#EE5D50', '#6AD2FF', '#7551FF'];
         const curs = Object.keys(A.expenseByCur).sort((a, b) => sum(A.expenseByCur[b]) - sum(A.expenseByCur[a]));
-        const list = $('catList');
+        const legend = $('catList');
         if (!curs.length) {
-            list.innerHTML = '<p class="empty">No expense data yet.</p>';
-            $('catSub').textContent = 'Share of expenses';
+            legend.innerHTML = '<li class="muted">No expense data yet.</li>';
+            $('catSub').textContent = 'Expenses';
+            if (S.catChart) { S.catChart.destroy(); S.catChart = null; }
             return;
         }
         const cur = curs[0];
         const cats = A.expenseByCur[cur];
         const total = sum(cats);
-        $('catSub').textContent = 'Share of expenses' + (curs.length > 1 ? ' · ' + cur + ' accounts only' : ' · ' + cur);
-        list.innerHTML = Object.keys(cats).sort((a, b) => cats[b] - cats[a]).slice(0, 6).map((c) => {
-            const pct = total ? (cats[c] / total) * 100 : 0;
-            return '<div class="cat-row"><div class="cat-top"><span>' + esc(c) + '</span><span class="muted">' + money(cats[c], cur) + ' · ' + pct.toFixed(0) + '%</span></div>' +
-                '<div class="bar"><i style="width:' + pct.toFixed(1) + '%"></i></div></div>';
+        const top = Object.keys(cats).sort((a, b) => cats[b] - cats[a]).slice(0, 6);
+        $('catSub').textContent = cur + (curs.length > 1 ? ' accounts only' : '');
+        legend.innerHTML = top.map((c, i) => {
+            const pct = total ? Math.round((cats[c] / total) * 100) : 0;
+            return '<li><i class="sw" style="background:' + COLORS[i] + '"></i><span class="l-name">' + esc(c) + '</span><span class="l-val">' + pct + '%</span></li>';
         }).join('');
+        if (typeof Chart !== 'undefined') {
+            const data = top.map((c) => cats[c]);
+            if (S.catChart) {
+                S.catChart.data.labels = top;
+                S.catChart.data.datasets[0].data = data;
+                S.catChart.update();
+            } else {
+                S.catChart = new Chart($('catChart'), {
+                    type: 'doughnut',
+                    data: { labels: top, datasets: [{ data, backgroundColor: COLORS, borderWidth: 3, borderColor: '#fff', hoverOffset: 4 }] },
+                    options: {
+                        responsive: true, maintainAspectRatio: false, cutout: '58%',
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { backgroundColor: '#1B2559', padding: 10, cornerRadius: 10, callbacks: { label: (c) => ' ' + c.label + ': ' + money(c.parsed, cur) } }
+                        }
+                    }
+                });
+            }
+        }
     }
     function sum(obj) { return Object.keys(obj).reduce((a, k) => a + obj[k], 0); }
 
@@ -509,7 +557,7 @@
         document.querySelectorAll('.nav-link').forEach((el) => el.classList.toggle('active', el.dataset.view === S.view));
         closeSidebar();
         window.scrollTo(0, 0);
-        if (S.view === 'overview' && S.chart) S.chart.resize();
+        if (S.view === 'overview') { if (S.chart) S.chart.resize(); if (S.catChart) S.catChart.resize(); }
     }
 
     // ---------- Sidebar (mobile) ----------
@@ -707,6 +755,7 @@
 
         $('hamburger').addEventListener('click', openSidebar);
         $('sidebarClose').addEventListener('click', closeSidebar);
+        $('sbExpand').addEventListener('click', () => $('shell').classList.toggle('expanded'));
         $('sbOverlay').addEventListener('click', closeSidebar);
 
         $('logoutBtn').addEventListener('click', async () => {
