@@ -1,28 +1,30 @@
 /* =========================================
-   EduFinance - Gemini API Integration (Backend-ready placeholder)
+   EduFinance - Gemini client (no API key here)
+   Calls the secure proxy hosted on Vercel.
    ========================================= */
 
-const GEMINI_API_KEY = "AQ.Ab8RN6LYWCVt7UQwLMHTHzhcuedROluSgB2onV0zpCGOq01POA"; // Test key in code for testing before secure backend migration
+// TODO: replace with YOUR Vercel address after deploying edufinance-api
+const GEMINI_API_URL = "https://YOUR-PROJECT.vercel.app/api/gemini";
 
 async function getGeminiFinancialAdvice(summaryData) {
-    if (!GEMINI_API_KEY) {
+    if (GEMINI_API_URL.includes("YOUR-PROJECT")) return null;
+    try {
+        const user = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser : null;
+        if (!user) return null;
+        const idToken = await user.getIdToken();
+        const response = await fetch(GEMINI_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + idToken
+            },
+            body: JSON.stringify({ summaryData })
+        });
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.advice || null;
+    } catch (e) {
+        console.error("Gemini request failed:", e);
         return null;
     }
-    try {
-        const prompt = `You are an expert, non-judgmental financial intelligence assistant for student finance. Analyze this small financial summary and provide 2-3 sentences of useful, encouraging financial insight and observation:\n${JSON.stringify(summaryData)}`;
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
-            })
-        });
-        const data = await response.json();
-        if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
-            return data.candidates[0].content.parts[0].text;
-        }
-    } catch (e) {
-        console.error("Gemini API error:", e);
-    }
-    return null;
 }
