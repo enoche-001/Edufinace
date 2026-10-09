@@ -50,9 +50,8 @@ async function getGeminiFinancialAdvice(summaryData) {
 }
 
 /* ---------- Insights AI helpers ---------- */
-// The backend limits the whole summaryData to 6000 characters, wraps it in its own prompt, and
-// answers in 2-3 sentences. So: short instructions, small data, one short answer per request.
-const EDU_AI_MAX_CHARS = 5600;
+// The backend limits the whole summaryData to 8000 characters. Keep instructions short and data small.
+const EDU_AI_MAX_CHARS = 7400;
 const EDU_AI_LEVELS = {
     beginner: 'Simple words, short sentences, no jargon.',
     intermediate: 'Concise and practical; use percentages and comparisons where helpful.',
@@ -114,7 +113,7 @@ window.EduAI = {
 
     // Chat. Throws { code } so the chat can show a proper message.
     async chat(message, history, context, level) {
-        const payload = eduAiBase(level, 'chat_answer', 'Answer the reader\'s "question" directly in 2-3 short sentences using "data" and the earlier "conversation". Do not give a generic monthly review.');
+        const payload = eduAiBase(level, 'chat_answer', 'Answer the reader\'s "question" directly in under 100 words using "data" and the earlier "conversation". Use short lines starting with "- " for lists and **bold** for key figures. Do not give a generic monthly review.');
         payload.conversation = (history || []).slice(-4).map(h => ({ role: h.role, text: String(h.text || '').slice(0, 180) }));
         payload.question = String(message || '').slice(0, 300);
         const d = JSON.parse(JSON.stringify(context || {}));
