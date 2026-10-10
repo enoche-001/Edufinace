@@ -134,6 +134,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmCancelBtn = document.getElementById('confirmCancelBtn');
     const confirmOkBtn = document.getElementById('confirmOkBtn');
     let confirmCallback = null;
+    let confirmRequired = '';
+    const confirmTypeWrap = document.getElementById('confirmTypeWrap');
+    const confirmTypeInput = document.getElementById('confirmTypeInput');
+    const confirmTypeLabel = document.getElementById('confirmTypeLabel');
 
     // Profile Elements
     const profileForm = document.getElementById('profileForm');
@@ -323,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else body.removeAttribute('data-theme');
         themeToggleBtn.innerHTML = dark ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
         const meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) meta.setAttribute('content', dark ? '#0b1030' : '#f4f5fa');
+        if (meta) meta.setAttribute('content', dark ? '#000000' : '#f4f5fa');
     }
 
     function toggleTheme() {
@@ -625,56 +629,42 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        if (resetDataBtn) {
-            resetDataBtn.addEventListener('click', () => {
-                showConfirmDialog('Reset All Data', 'Are you sure you want to delete all transactions, budgets, and savings goals? This cannot be undone.', async () => {
-                    state.transactions = [];
-                    state.budgets = {};
-                    state.savingsGoals = [];
-                    if (currentUser) {
-                        const batch = db.batch();
-                        const transSnap = await db.collection('users').doc(currentUser.uid).collection('transactions').get();
-                        transSnap.forEach(doc => batch.delete(doc.ref));
-                        const savingsSnap = await db.collection('users').doc(currentUser.uid).collection('savingsGoals').get();
-                        savingsSnap.forEach(doc => batch.delete(doc.ref));
-                        await batch.commit();
-                        await db.collection('users').doc(currentUser.uid).collection('settings').doc('budgets').set({ categories: {} });
-                    }
-                    renderAll();
-                    showToast('All data has been reset.', 'success');
-                });
+        const RESET_PHRASE = 'data-reset';
+        const wipeAllData = async () => {
+            state.transactions = [];
+            state.budgets = {};
+            state.savingsGoals = [];
+            if (currentUser) {
+                const batch = db.batch();
+                const transSnap = await db.collection('users').doc(currentUser.uid).collection('transactions').get();
+                transSnap.forEach(doc => batch.delete(doc.ref));
+                const savingsSnap = await db.collection('users').doc(currentUser.uid).collection('savingsGoals').get();
+                savingsSnap.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+                await db.collection('users').doc(currentUser.uid).collection('settings').doc('budgets').set({ categories: {} });
+            }
+            renderAll();
+            showToast('All data has been reset.', 'success');
+        };
+        const askReset = () => {
+            if (window.EduUI.gate('Sign up to manage your own data.')) return;
+            showConfirmDialog('Reset all data', 'This permanently deletes all your transactions, budgets and savings goals. This cannot be undone.', wipeAllData, {
+                requireText: RESET_PHRASE, okLabel: 'Reset everything', danger: true
             });
-        }
-
-        if (resetDataInsideBtn) {
-            resetDataInsideBtn.addEventListener('click', () => {
-                if (window.EduUI.gate('Sign up to manage your own data.')) return;
-                showConfirmDialog('Reset Account Data', 'This will wipe all your financial tracking data. Please confirm your password or intent to proceed.', async () => {
-                    state.transactions = [];
-                    state.budgets = {};
-                    state.savingsGoals = [];
-                    if (currentUser) {
-                        const batch = db.batch();
-                        const transSnap = await db.collection('users').doc(currentUser.uid).collection('transactions').get();
-                        transSnap.forEach(doc => batch.delete(doc.ref));
-                        const savingsSnap = await db.collection('users').doc(currentUser.uid).collection('savingsGoals').get();
-                        savingsSnap.forEach(doc => batch.delete(doc.ref));
-                        await batch.commit();
-                        await db.collection('users').doc(currentUser.uid).collection('settings').doc('budgets').set({ categories: {} });
-                    }
-                    renderAll();
-                    showToast('Account data successfully reset.', 'success');
-                });
-            });
-        }
+        };
+        if (resetDataBtn) resetDataBtn.addEventListener('click', askReset);
+        if (resetDataInsideBtn) resetDataInsideBtn.addEventListener('click', askReset);
 
         if (logoutBtn) {
             logoutBtn.addEventListener('click', () => {
-                showConfirmDialog('Logout', 'Are you sure you want to log out of EduFinance?', async () => {
-                    if (auth) await auth.signOut();
-                    localStorage.removeItem('edu_is_logged_in');
-                    window.location.href = 'login.html';
-                });
+                showConfirmDialog('Log out?', 'You will be signed out of EduFinance on this device.', () => {
+                    // Second, separate confirmation
+                    showConfirmDialog('Really log out?', 'Last check: tap "Yes, log out" to end your session now.', async () => {
+                        try { if (auth) await auth.signOut(); } catch (e) { /* ignore */ }
+                        localStorage.removeItem('edu_is_logged_in');
+                        window.location.href = 'login.html';
+                    }, { okLabel: 'Yes, log out', danger: true });
+                }, { okLabel: 'Continue' });
             });
         }
 
@@ -682,9 +672,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (confirmCancelBtn) confirmCancelBtn.addEventListener('click', closeConfirmModal);
         if (confirmOkBtn) {
             confirmOkBtn.addEventListener('click', () => {
-                if (confirmCallback) confirmCallback();
-                closeConfirmModal();
+                if (confirmRequired && confirmTypeInput.value.trim() !== confirmRequired) return;
+                const cb = confirmCallback;
+                closeConfirmModal();   // close first so a callback can open a follow-up dialog
+                if (cb) cb();
             });
+            if (confirmTypeInput) {
+                confirmTypeInput.addEventListener('input', () => {
+                    confirmOkBtn.disabled = confirmTypeInput.value.trim() !== confirmRequired;
+                });
+                confirmTypeInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !confirmOkBtn.disabled) { e.preventDefault(); confirmOkBtn.click(); }
+                });
+            }
         }
         if (confirmModal) {
             confirmModal.addEventListener('click', (e) => {
@@ -693,18 +693,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function showConfirmDialog(title, message, onConfirm) {
+    function showConfirmDialog(title, message, onConfirm, opts) {
         if (!confirmModal) return;
+        opts = opts || {};
         confirmModalTitle.textContent = title;
         confirmModalMessage.textContent = message;
         confirmCallback = onConfirm;
+        confirmRequired = opts.requireText || '';
+        confirmOkBtn.textContent = opts.okLabel || 'Confirm';
+        confirmOkBtn.className = 'btn ' + (opts.danger ? 'btn-danger-solid' : 'btn-primary');
+        if (confirmTypeWrap) {
+            confirmTypeWrap.hidden = !confirmRequired;
+            confirmTypeInput.value = '';
+            if (confirmRequired) {
+                confirmTypeLabel.innerHTML = 'To confirm, type <code></code> below:';
+                confirmTypeLabel.querySelector('code').textContent = confirmRequired;
+                confirmTypeInput.placeholder = confirmRequired;
+            }
+        }
+        confirmOkBtn.disabled = !!confirmRequired;
         confirmModal.classList.add('show');
+        if (confirmRequired) setTimeout(() => confirmTypeInput.focus(), 150);
     }
 
     function closeConfirmModal() {
         if (!confirmModal) return;
         confirmModal.classList.remove('show');
         confirmCallback = null;
+        confirmRequired = '';
+        if (confirmTypeInput) confirmTypeInput.value = '';
+        if (confirmOkBtn) confirmOkBtn.disabled = false;
     }
 
     const TAB_TITLES = {

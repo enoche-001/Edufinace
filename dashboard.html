@@ -35,7 +35,6 @@
         <div class="sidebar-footer">
             <a class="btn btn-primary btn-full" data-auth="guest" href="login.html#signup">Create free account</a>
             <a class="btn btn-ghost btn-full" data-auth="guest" href="login.html">Log in</a>
-            <button id="logoutBtn" data-auth="user" class="btn btn-ghost btn-full"><i class="fa-solid fa-right-from-bracket"></i> Log out</button>
         </div>
     </aside>
 
@@ -511,8 +510,13 @@
                     </details>
                     <div class="card danger-zone">
                         <div class="sec-head"><h2>Reset data</h2></div>
-                        <p class="text-muted" style="font-size:0.84rem;margin-bottom:12px;">Deletes all transactions, budgets and goals.</p>
+                        <p class="text-muted" style="font-size:0.84rem;margin-bottom:12px;">Deletes all transactions, budgets and goals. You'll be asked to type a confirmation word.</p>
                         <button type="button" class="btn btn-danger btn-full" id="resetDataInsideBtn"><i class="fa-solid fa-trash-can"></i> Reset all data</button>
+                    </div>
+                    <div class="card" data-auth="user">
+                        <div class="sec-head"><h2>Account</h2></div>
+                        <p class="text-muted" style="font-size:0.84rem;margin-bottom:12px;">Sign out of EduFinance on this device. You'll be asked to confirm twice.</p>
+                        <button type="button" class="btn btn-ghost btn-full" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Log out</button>
                     </div>
                 </div>
             </div>
@@ -580,6 +584,10 @@
             <button type="button" class="close-modal-btn" id="closeConfirmModal" aria-label="Close">&times;</button>
         </div>
         <p id="confirmModalMessage" class="text-muted"></p>
+        <div class="confirm-type" id="confirmTypeWrap" hidden>
+            <label for="confirmTypeInput" id="confirmTypeLabel"></label>
+            <input type="text" id="confirmTypeInput" class="form-control" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+        </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-ghost" id="confirmCancelBtn">Cancel</button>
             <button type="button" class="btn btn-primary" id="confirmOkBtn">Confirm</button>
@@ -738,7 +746,6 @@
             <button type="button" class="more-item" data-go="projections"><i class="fa-solid fa-calendar-check"></i><span>Semester plan</span></button>
             <button type="button" class="more-item" data-go="profile"><i class="fa-solid fa-user-gear"></i><span>Profile</span></button>
             <button type="button" class="more-item" id="moreTheme"><i class="fa-solid fa-moon"></i><span>Theme</span></button>
-            <button type="button" class="more-item danger" id="moreLogout" data-auth="user"><i class="fa-solid fa-right-from-bracket"></i><span>Log out</span></button>
             <a class="more-item" data-auth="guest" href="login.html#signup" style="text-decoration:none;color:inherit;"><i class="fa-solid fa-user-plus"></i><span>Sign up</span></a>
             <a class="more-item" data-auth="guest" href="login.html" style="text-decoration:none;color:inherit;"><i class="fa-solid fa-right-to-bracket"></i><span>Log in</span></a>
         </div>

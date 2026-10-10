@@ -43,7 +43,6 @@
     quickForm.addEventListener('submit', () => { setTimeout(() => EduUI.closeAll(), 350); });
 
     $('moreTheme').addEventListener('click', () => { const t = $('themeToggleBtn'); if (t) t.click(); EduUI.closeAll(); });
-    $('moreLogout').addEventListener('click', () => { EduUI.closeAll(); const l = $('logoutBtn'); if (l) l.click(); });
 
     // Keep the bar out of the way of the keyboard (not while typing inside a sheet)
     const typing = (el) => el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName);

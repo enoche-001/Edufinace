@@ -34,13 +34,13 @@
 }
 
 [data-theme="dark"] {
-    --bg-app: #0b1437;
-    --bg-sidebar: #111c44;
-    --bg-card: #111c44;
-    --bg-input: #1b254b;
-    --text-main: #ffffff;
-    --text-muted: #a3AED0;
-    --border-color: #2b3674;
+    --bg-app: #000000;
+    --bg-sidebar: #0c0c10;
+    --bg-card: #0c0c10;
+    --bg-input: #14141a;
+    --text-main: #f5f3fb;
+    --text-muted: #8f8b9f;
+    --border-color: #23202e;
     --box-shadow: 0px 18px 40px rgba(0, 0, 0, 0.3);
 }
 
