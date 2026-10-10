@@ -9,9 +9,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>try{if(localStorage.getItem('edu_admin_theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
     <link rel="stylesheet" href="admin.css?v=20261010a">
 </head>
 <body class="login-body">
+    <button type="button" class="icon-btn theme-fab" id="themeToggle" aria-label="Switch theme"><i class="fa-solid fa-moon"></i></button>
     <main class="login-card">
         <div class="login-brand">
             <div class="sb-logo"><i class="fa-solid fa-graduation-cap"></i></div>
@@ -44,5 +46,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="admin-login.js?v=20261010a"></script>
+<script src="admin-theme.js?v=20261010a"></script>
 </body>
 </html>
