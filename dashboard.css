@@ -6,6 +6,7 @@
 
 /* ---------- Tokens ---------- */
 body.app {
+    color-scheme: light;   /* stay light unless the user picks dark (also opts out of browser auto-dark) */
     --bg: #f4f5fa;
     --surface: #ffffff;
     --surface-2: #f5f6fb;
@@ -36,6 +37,7 @@ body.app {
 }
 
 body.app[data-theme="dark"] {
+    color-scheme: dark;
     /* Luxury black (neutral blacks, purple only as the accent) */
     --bg: #050506;
     --surface: #0d0d10;

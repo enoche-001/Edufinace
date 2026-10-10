@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dataLoaded = { transactions: false, budgets: false, savings: false, profile: false };
 
     let state = {
-        theme: localStorage.getItem('edu_theme') || 'light',
+        theme: localStorage.getItem('edu_theme_v2') || 'light',   // light unless the user picks dark
         transactions: [],
         budgets: {},
         savingsGoals: [],
@@ -332,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function toggleTheme() {
         state.theme = state.theme === 'light' ? 'dark' : 'light';
-        localStorage.setItem('edu_theme', state.theme);
+        localStorage.setItem('edu_theme_v2', state.theme);
         applyTheme();
     }
 

@@ -31,8 +31,7 @@
             '.nlp-row{display:flex;gap:10px}' +
             '.nlp-btn{flex:1;padding:13px;border-radius:12px;border:1px solid transparent;font:inherit;font-weight:700;cursor:pointer}' +
             '.nlp-yes{background:#8b5cf6;color:#fff}.nlp-yes:disabled{opacity:.5;cursor:default}' +
-            '.nlp-no{background:transparent;border-color:#e5e8f1;color:#646e90}' +
-            '@media (prefers-color-scheme:dark){.nlp-card{background:#0d0d10;color:#f4f4f6;border:1px solid #232328}.nlp-card p{color:#8b8b95}.nlp-card input{background:#15151a;border-color:#232328}.nlp-no{border-color:#232328;color:#8b8b95}}';
+            '.nlp-no{background:transparent;border-color:#e5e8f1;color:#646e90}';
         document.head.appendChild(s);
     }
 
