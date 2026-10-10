@@ -90,6 +90,19 @@ service cloud.firestore {
       allow create, update, delete: if isOwner(userId) && hasValidProfile(userId);
     }
 
+    // App-lock PIN (salted PBKDF2 hash only, never the PIN). Kept OUTSIDE "settings" on purpose:
+    // the admin read rule below covers every settings document, and admins must not see PIN hashes.
+    match /users/{userId}/security/lock {
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId)
+        && request.resource.data.keys().hasOnly(['alg', 'iters', 'salt', 'hash', 'updatedAt'])
+        && request.resource.data.alg == 'pbkdf2'
+        && request.resource.data.iters is int
+        && request.resource.data.salt is string && request.resource.data.salt.size() <= 64
+        && request.resource.data.hash is string && request.resource.data.hash.size() == 64
+        && request.resource.data.updatedAt == request.time;
+    }
+
     // ---------- Admin dashboard (admin.html) ----------
 
     // A signed-in user can check whether THEY are an admin. Only admins can list the others.

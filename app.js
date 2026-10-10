@@ -751,6 +751,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function switchTab(tabId) {
         if (!document.getElementById(tabId + '-tab')) return;
         activeTab = tabId;
+        try { sessionStorage.setItem('edu_tab', tabId); } catch (e) {}
         menuItems.forEach(i => i.classList.toggle('active', i.getAttribute('data-tab') === tabId));
         tabContents.forEach(tc => tc.classList.toggle('active', tc.id === `${tabId}-tab`));
         renderHeaderTitle();
@@ -759,6 +760,25 @@ document.addEventListener('DOMContentLoaded', () => {
         window.scrollTo(0, 0);
     }
     window.EduUI.goTo = switchTab;
+
+    // Refresh keeps you on the same screen and scroll position (data reloads, the view does not reset).
+    // A fresh visit (link, new tab) still starts at Home.
+    (function keepView() {
+        const nav = ((window.performance && performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || {}).type;
+        const again = nav === 'reload' || nav === 'back_forward';
+        try { history.scrollRestoration = 'manual'; } catch (e) {}
+        window.addEventListener('pagehide', () => { try { sessionStorage.setItem('edu_scroll', String(Math.round(window.scrollY))); } catch (e) {} });
+        window.addEventListener('load', () => {
+            let tab = null, y = 0;
+            try { tab = sessionStorage.getItem('edu_tab'); y = parseInt(sessionStorage.getItem('edu_scroll') || '0', 10) || 0; } catch (e) {}
+            if (!again) { try { sessionStorage.removeItem('edu_tab'); sessionStorage.removeItem('edu_scroll'); } catch (e) {} return; }
+            if (tab && tab !== activeTab) switchTab(tab);
+            if (y > 0) {   // content fills in as data arrives, so retry for a moment
+                let tries = 0;
+                const t = setInterval(() => { window.scrollTo(0, y); if (Math.abs(window.scrollY - y) < 4 || ++tries > 14) clearInterval(t); }, 150);
+            }
+        });
+    })();
 
     function renderAll() {
         renderHeaderProfile();

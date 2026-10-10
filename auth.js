@@ -95,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ---------- Email verification ----------
+    let signingInNow = false;   // set while the user is submitting the form on this page
     let verifyPoll = null;
     let resendTimer = null;
 
@@ -233,6 +234,17 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (user.emailVerified) {
                 goToDashboard('Welcome back!');
             }
+        });
+    }
+
+    // Already signed in on this browser? Skip the form: the app opens and asks for the PIN.
+    if (auth && location.hash !== '#verify') {
+        const unsubSession = auth.onAuthStateChanged(async (user) => {
+            unsubSession();
+            if (!user || signingInNow) return;
+            try { if (await needsVerification(user)) return; } catch (e) { return; }
+            localStorage.setItem('edu_is_logged_in', 'true');
+            window.location.replace('dashboard.html');
         });
     }
 
@@ -383,6 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const btn = document.getElementById('loginSubmitBtn');
             if (btn) btn.disabled = true;
             try {
+                signingInNow = true;
                 const cred = await auth.signInWithEmailAndPassword(email, password);
                 if (await needsVerification(cred.user)) {
                     showVerifyScreen(cred.user, 0);
@@ -419,6 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const submitBtn = document.getElementById('signupSubmitBtn');
             if (submitBtn) submitBtn.disabled = true;
             try {
+                signingInNow = true;
                 const userCred = await auth.createUserWithEmailAndPassword(email, password);
                 const user = userCred.user;
                 const accountId = 'EDU-' + Math.floor(100000 + Math.random() * 900000);
@@ -456,7 +470,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Google Auth Handler
     const handleGoogleAuth = async () => {
         try {
-            const res = await auth.signInWithPopup(googleProvider);
+            signingInNow = true;
+                const res = await auth.signInWithPopup(googleProvider);
             const user = res.user;
             if (db) {
                 const profileRef = db.collection('users').doc(user.uid).collection('settings').doc('profile');
