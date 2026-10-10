@@ -327,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else body.removeAttribute('data-theme');
         themeToggleBtn.innerHTML = dark ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
         const meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) meta.setAttribute('content', dark ? '#000000' : '#f4f5fa');
+        if (meta) meta.setAttribute('content', dark ? '#050506' : '#f4f5fa');
     }
 
     function toggleTheme() {
