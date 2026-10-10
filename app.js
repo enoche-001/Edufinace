@@ -660,6 +660,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showConfirmDialog('Log out?', 'You will be signed out of EduFinance on this device.', () => {
                     // Second, separate confirmation
                     showConfirmDialog('Really log out?', 'Last check: tap "Yes, log out" to end your session now.', async () => {
+                        try { if (window.EduLock) window.EduLock.forget(); } catch (e) { /* ignore */ }
                         try { if (auth) await auth.signOut(); } catch (e) { /* ignore */ }
                         localStorage.removeItem('edu_is_logged_in');
                         window.location.href = 'login.html';

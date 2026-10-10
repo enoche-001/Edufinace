@@ -3,6 +3,8 @@
 (function () {
     const KEY = 'edu_lock_';
     const HINT = 'edu_lock_hint';
+    const ASKED = 'edu_lock_asked_';   // first-run PIN prompt already shown for this user on this device
+    let firstRun = false;
     const $ = (id) => document.getElementById(id);
     const enc = new TextEncoder();
     let uid = null, cfg = null, locked = false, hiddenAt = 0;
@@ -90,8 +92,9 @@
         $('lockTitle').textContent = titles[mode];
         const unlocking = mode === 'unlock';
         $('lockBio').style.visibility = (unlocking && cfg && cfg.bio) ? 'visible' : 'hidden';
-        $('lockLink').textContent = unlocking ? 'Forgot PIN? Sign out' : 'Cancel';
-        if (!coolUntil || Date.now() >= coolUntil) $('lockSub').textContent = unlocking ? 'EduFinance is locked' : '4 digits';
+        $('lockLink').textContent = unlocking ? 'Forgot PIN? Sign out' : (firstRun && (mode === 'setup1' || mode === 'setup2') ? 'Skip for now' : 'Cancel');
+        if (!coolUntil || Date.now() >= coolUntil) $('lockSub').textContent = unlocking ? 'EduFinance is locked'
+            : (firstRun && mode === 'setup1' ? 'Set a 4-digit PIN. On this device you will only need this PIN to open EduFinance.' : '4 digits');
     }
 
     function show(m) {
@@ -107,7 +110,7 @@
         const el = $('lockScreen');
         if (el) el.hidden = true;
         document.body.classList.remove('lock-on');
-        locked = false; entry = ''; first = ''; bioTried = false;
+        locked = false; entry = ''; first = ''; bioTried = false; firstRun = false;
     }
 
     function shake(msg) {
@@ -224,7 +227,23 @@
         if (!u) { uid = null; cfg = null; hide(); localStorage.setItem(HINT, '0'); return; }
         uid = u.uid; cfg = load();
         localStorage.setItem(HINT, cfg ? '1' : '0');
-        if (cfg) show('unlock'); else hide();
+        if (cfg) show('unlock');
+        else {
+            hide();
+            // First time on this device: ask them to create a PIN straight away
+            if (!localStorage.getItem(ASKED + uid)) {
+                localStorage.setItem(ASKED + uid, '1');
+                setTimeout(() => { if (!cfg && uid) { firstRun = true; show('setup1'); } }, 600);
+            }
+        }
         renderCard();
     });
+
+    // Called on an explicit log out: forget this device's PIN so the next sign-in starts fresh
+    window.EduLock = {
+        forget: function () {
+            if (uid) { localStorage.removeItem(KEY + uid); localStorage.removeItem(ASKED + uid); }
+            cfg = null; localStorage.setItem(HINT, '0'); hide();
+        }
+    };
 })();
