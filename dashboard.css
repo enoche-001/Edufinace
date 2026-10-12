@@ -109,6 +109,8 @@ body.app:not(.is-guest) [data-auth="guest"] { display: none !important; }
 .sidebar-header { height: var(--bar-h); display: flex; align-items: center; padding: 0 22px; border-bottom: 1px solid var(--line); }
 .logo { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 800; letter-spacing: -0.01em; }
 .logo-icon { color: var(--brand); font-size: 1.35rem; }
+.logo .logo-mark { width: 30px; height: 32px; flex: none; }
+.logo .wm { font-size: 1.15rem; }
 .sidebar-menu { padding: 14px 12px; display: flex; flex-direction: column; gap: 4px; flex: 1; overflow-y: auto; }
 .menu-item {
     display: flex; align-items: center; gap: 12px;

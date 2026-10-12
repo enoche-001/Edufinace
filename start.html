@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f4f7fe">
+<title>EduFinance</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="EduFinance">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;800&display=swap" rel="stylesheet">
+<style>
+:root{--brand:#4318ff;--ink:#2b3674;--muted:#707eae;--green:#05a67a;--bg:#f4f7fe}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:var(--bg);overflow:hidden}
+body{font-family:'Plus Jakarta Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink)}
+.splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:24px;
+  background:radial-gradient(60% 45% at 50% 40%,rgba(67,24,255,.10),transparent 70%),radial-gradient(40% 30% at 50% 70%,rgba(5,205,153,.08),transparent 70%),var(--bg);
+  transition:opacity .45s ease,transform .45s ease}
+.splash.out{opacity:0;transform:scale(1.04)}
+.halo{position:absolute;width:min(70vw,320px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(67,24,255,.16),rgba(67,24,255,0) 68%);
+  transform:translateY(-6vh) scale(.6);opacity:0;animation:halo 1.6s .1s cubic-bezier(.22,.8,.3,1) forwards}
+.stack{display:flex;flex-direction:column;align-items:center;transform:translateY(-6vh)}
+.mark{position:relative;width:min(44vw,176px);height:auto;overflow:visible}
+.s-cap{transform-box:fill-box;transform-origin:50% 100%;animation:cap .7s .15s cubic-bezier(.34,1.45,.5,1) both}
+.s-tassel{transform-box:fill-box;transform-origin:50% 0;animation:fadeIn .3s .55s both,swing 1.1s .8s ease-in-out 2}
+.s-e{transform-box:fill-box;transform-origin:30% 60%;animation:eIn .6s .3s cubic-bezier(.22,.9,.3,1) both}
+.s-b{transform-box:fill-box;transform-origin:50% 100%;animation:grow .45s cubic-bezier(.3,1.4,.5,1) both}
+.s-b1{animation-delay:.85s}.s-b2{animation-delay:.98s}.s-b3{animation-delay:1.11s}
+.s-arrow{stroke-dasharray:1;stroke-dashoffset:1;animation:draw .65s 1.15s cubic-bezier(.4,.1,.2,1) forwards}
+.s-head{transform-box:fill-box;transform-origin:50% 100%;animation:pop .35s 1.72s cubic-bezier(.34,1.8,.5,1) both}
+.word{margin-top:clamp(14px,3vh,24px);font-size:clamp(1.9rem,8vw,2.5rem);font-weight:800;letter-spacing:-.03em;line-height:1;white-space:nowrap;
+  animation:rise .55s 1.45s cubic-bezier(.22,.8,.3,1) both}
+.word b{color:var(--green);font-weight:800}
+.tag{margin-top:10px;font-size:.92rem;font-weight:500;color:var(--muted);animation:rise .55s 1.7s cubic-bezier(.22,.8,.3,1) both}
+.bar{position:absolute;left:50%;bottom:calc(9vh + env(safe-area-inset-bottom,0px));width:min(46vw,170px);height:4px;border-radius:99px;background:rgba(67,24,255,.12);overflow:hidden;transform:translateX(-50%);opacity:0;animation:fadeIn .3s 1.2s forwards}
+.bar i{display:block;height:100%;width:100%;border-radius:inherit;background:linear-gradient(90deg,var(--brand),#2ee0b0);transform:translateX(-100%);animation:load 1.5s 1.25s cubic-bezier(.4,.1,.2,1) forwards}
+@keyframes cap{from{opacity:0;transform:translateY(-34px) rotate(-6deg) scale(.9)}to{opacity:1;transform:none}}
+@keyframes eIn{from{opacity:0;transform:translateX(-14px) scale(.86)}to{opacity:1;transform:none}}
+@keyframes grow{from{opacity:0;transform:scaleY(0)}to{opacity:1;transform:scaleY(1)}}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes pop{from{opacity:0;transform:scale(.2)}to{opacity:1;transform:scale(1)}}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes swing{0%,100%{transform:rotate(0)}30%{transform:rotate(7deg)}70%{transform:rotate(-5deg)}}
+@keyframes halo{to{opacity:1;transform:translateY(-6vh) scale(1)}}
+@keyframes load{to{transform:translateX(0)}}
+@media (prefers-reduced-motion:reduce){
+  .splash *,.splash{animation-duration:.01ms!important;animation-delay:0s!important;transition-duration:.01ms!important}
+  .s-arrow{stroke-dashoffset:0}
+}
+noscript{position:fixed;bottom:20px;left:0;right:0;text-align:center;font-size:.9rem}
+noscript a{color:var(--brand);font-weight:700}
+</style>
+</head>
+<body>
+<main class="splash" id="splash" aria-label="Loading EduFinance">
+  <div class="halo" aria-hidden="true"></div>
+  <div class="stack">
+  <svg class="mark" viewBox="0 0 120 126" role="img" aria-label="EduFinance logo">
+    <defs><linearGradient id="sp" gradientUnits="userSpaceOnUse" x1="10" y1="4" x2="100" y2="120"><stop offset="0" stop-color="#5B3DFF"/><stop offset="1" stop-color="#2B1C9E"/></linearGradient><linearGradient id="sg" gradientUnits="userSpaceOnUse" x1="60" y1="70" x2="100" y2="124"><stop offset="0" stop-color="#2EE0B0"/><stop offset="1" stop-color="#05A67A"/></linearGradient></defs>
+    <path class="s-cap" d="M8 23 56 5l48 18-48 15Z" fill="url(#sp)" stroke="url(#sp)" stroke-width="4" stroke-linejoin="round"/><g class="s-tassel"><path d="M13 26v24" stroke="#3A22D6" stroke-width="2.4" stroke-linecap="round" fill="none"/><rect x="9.5" y="49" width="7" height="12" rx="2.6" fill="#2B1C9E"/></g><g transform="translate(0 6)"><path class="s-e" d="M42 40H86A6 6 0 0 1 92 46V50A6 6 0 0 1 86 56H38V67H76A5 5 0 0 1 81 72V76A5 5 0 0 1 76 81H38V94H50A5 5 0 0 1 55 99V105A5 5 0 0 1 50 110H42A22 22 0 0 1 20 88V62A22 22 0 0 1 42 40Z" fill="url(#sp)" stroke="url(#sp)" stroke-width="1.6" stroke-linejoin="round"/><rect class="s-b s-b1" x="60" y="94" width="10" height="16" rx="2.4" fill="url(#sg)"/><rect class="s-b s-b2" x="73" y="87" width="10" height="23" rx="2.4" fill="url(#sg)"/><rect class="s-b s-b3" x="86" y="78" width="10" height="32" rx="2.4" fill="url(#sg)"/><path class="s-arrow" pathLength="1" d="M52 116C82 116 104 102 104 68" fill="none" stroke="url(#sg)" stroke-width="4.6" stroke-linecap="round"/><path class="s-head" d="M104 56 96.5 69h15z" fill="url(#sg)" stroke="url(#sg)" stroke-width="2" stroke-linejoin="round"/></g>
+  </svg>
+  <div class="word" aria-hidden="true">Edu<b>finance</b></div>
+  <p class="tag">Smart student budgeting</p>
+  </div>
+  <div class="bar" aria-hidden="true"><i></i></div>
+</main>
+<noscript><a href="login.html">Continue to EduFinance</a></noscript>
+<script>
+(function () {
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var loggedIn = false;
+  try { loggedIn = localStorage.getItem('edu_is_logged_in') === 'true'; } catch (e) {}
+  // Installed app opens straight into the app: signed-in users get the dashboard, everyone else the login screen.
+  // The marketing landing page (index.html) is never part of this flow.
+  var target = loggedIn ? 'dashboard.html' : 'login.html';
+  // warm the next page while the animation plays
+  var l = document.createElement('link'); l.rel = 'prefetch'; l.href = target; document.head.appendChild(l);
+  try { fetch(target, { credentials: 'same-origin' }).catch(function () {}); } catch (e) {}
+  var splash = document.getElementById('splash'), done = false;
+  function go() {
+    if (done) return; done = true;
+    splash.classList.add('out');
+    setTimeout(function () { location.replace(target); }, reduce ? 0 : 380);
+  }
+  setTimeout(go, reduce ? 500 : 3000);
+  splash.addEventListener('click', go);   // tap to skip
+})();
+</script>
+<script src="pwa.js" defer></script>
+</body>
+</html>

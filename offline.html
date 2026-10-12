@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#4318FF"><title>Offline - EduFinance</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<style>
+:root{--brand:#4318FF;--ink:#2b3674;--muted:#707eae;--bg:#f4f7fe}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px;background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;text-align:center}
+.card{max-width:380px}.card img{width:84px;height:auto;margin-bottom:18px}
+h1{font-size:1.4rem;margin:0 0 8px;font-weight:800}p{margin:0 0 22px;color:var(--muted);line-height:1.55}
+button{font:inherit;font-weight:700;border:0;border-radius:14px;padding:14px 26px;background:var(--brand);color:#fff;cursor:pointer}
+button:active{transform:scale(.97)}
+</style></head><body>
+<div class="card"><img src="favicon.svg" alt="EduFinance"><h1>You're offline</h1>
+<p>No internet connection right now. Pages you've already opened still work. Reconnect to sync your latest data.</p>
+<button type="button" onclick="location.reload()">Try again</button></div>
+<script>window.addEventListener('online',function(){location.reload()})</script>
+</body></html>

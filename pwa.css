@@ -1,0 +1,59 @@
+/* EduFinance shared motion + PWA polish. Loaded on every page. */
+@keyframes eduPageIn { from { opacity: 0; } to { opacity: 1; } }
+body { animation: eduPageIn .32s ease-out both; }
+html { -webkit-tap-highlight-color: transparent; }
+a, button, [role="button"], input, select, textarea, label { touch-action: manipulation; }
+button:not(:disabled), .btn, .menu-item, .nav-link, .bn-item, .seg-btn { -webkit-user-select: none; user-select: none; }
+.btn:not(:disabled):active, button.btn:not(:disabled):active, .bn-item:active, .seg-btn:active { transform: scale(.97); }
+
+/* Installed-app feel */
+html.is-standalone { overscroll-behavior-y: none; }
+html.is-standalone body { -webkit-touch-callout: none; }
+html.is-standalone input, html.is-standalone textarea, html.is-standalone [contenteditable] { -webkit-user-select: text; user-select: text; }
+
+/* Soft entrance for dashboard cards */
+@keyframes eduRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.tab-content.active > * { animation: eduRise .38s cubic-bezier(.22,.8,.3,1) both; }
+.tab-content.active > *:nth-child(2) { animation-delay: .04s; }
+.tab-content.active > *:nth-child(3) { animation-delay: .08s; }
+.tab-content.active > *:nth-child(4) { animation-delay: .12s; }
+.tab-content.active > *:nth-child(n+5) { animation-delay: .16s; }
+
+/* Install banner, update toast, offline pill, iOS sheet */
+.pwa-banner { position: fixed; z-index: 3000; left: 12px; right: 12px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); max-width: 420px; margin: 0 auto;
+  display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; border-radius: 18px; background: #fff; color: #2b3674;
+  box-shadow: 0 18px 44px rgba(43,54,116,.22); border: 1px solid #e6eaf6; font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  transform: translateY(24px); opacity: 0; transition: transform .35s cubic-bezier(.22,.8,.3,1), opacity .25s; }
+.pwa-banner.in { transform: none; opacity: 1; }
+.pwa-banner img { border-radius: 10px; flex: none; }
+.pwa-banner div { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.pwa-banner b { font-size: .92rem; } .pwa-banner span { font-size: .78rem; color: #707eae; }
+.pwa-banner .pwa-go { border: 0; border-radius: 11px; padding: 10px 16px; font: inherit; font-weight: 700; font-size: .85rem; background: #4318ff; color: #fff; cursor: pointer; }
+.pwa-banner .pwa-x { border: 0; background: none; font-size: 1.4rem; line-height: 1; color: #707eae; cursor: pointer; padding: 4px 6px; }
+@media (min-width: 900px) { .pwa-banner { bottom: 24px; left: auto; right: 24px; margin: 0; } }
+
+.pwa-toast { position: fixed; z-index: 3100; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; align-items: center; gap: 14px;
+  padding: 12px 14px 12px 18px; border-radius: 14px; background: #2b3674; color: #fff; font: 600 .88rem 'Plus Jakarta Sans', system-ui, sans-serif; box-shadow: 0 14px 34px rgba(0,0,0,.28); animation: eduRise .3s ease both; }
+.pwa-toast button { border: 0; border-radius: 9px; padding: 8px 14px; font: inherit; font-weight: 700; background: #05cd99; color: #04382b; cursor: pointer; }
+
+.pwa-net { position: fixed; z-index: 3200; top: calc(10px + env(safe-area-inset-top, 0px)); left: 50%; transform: translate(-50%, -140%); padding: 8px 16px; border-radius: 99px;
+  background: #2b3674; color: #fff; font: 600 .8rem 'Plus Jakarta Sans', system-ui, sans-serif; transition: transform .3s cubic-bezier(.22,.8,.3,1); pointer-events: none; }
+.pwa-net.show { transform: translate(-50%, 0); } .pwa-net.ok { background: #05a67a; }
+
+.pwa-sheet-bg { position: fixed; inset: 0; z-index: 3300; background: rgba(10,14,44,.5); display: flex; align-items: flex-end; justify-content: center; animation: eduPageIn .2s ease both; }
+.pwa-sheet { width: 100%; max-width: 440px; background: #fff; color: #2b3674; border-radius: 24px 24px 0 0; padding: 22px 22px calc(22px + env(safe-area-inset-bottom, 0px)); font-family: 'Plus Jakarta Sans', system-ui, sans-serif; animation: eduRise .3s ease both; }
+.pwa-sheet b { font-size: 1.05rem; } .pwa-sheet p { color: #707eae; line-height: 1.55; margin: 8px 0 18px; }
+.pwa-sheet button { width: 100%; border: 0; border-radius: 13px; padding: 14px; font: inherit; font-weight: 700; background: #4318ff; color: #fff; }
+
+/* Brand wordmark (Edu + finance) used next to the logo mark everywhere */
+.wm { font-weight: 800; letter-spacing: -.02em; color: #2b3674; }
+.wm b { font-weight: 800; color: #05a67a; }
+html[data-theme="dark"] .wm, body[data-theme="dark"] .wm { color: #e9edff; }
+html[data-theme="dark"] .wm b, body[data-theme="dark"] .wm b { color: #2ee0b0; }
+
+@media (prefers-reduced-motion: reduce) {
+  body, .tab-content.active > *, .pwa-banner, .pwa-toast, .pwa-sheet, .pwa-sheet-bg { animation: none !important; transition: none !important; }
+}
+
+[data-pwa-install][hidden] { display: none !important; }
+@media (max-width: 640px) { .nav-cta [data-pwa-install] { display: none !important; } }

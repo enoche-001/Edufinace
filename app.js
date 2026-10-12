@@ -16,6 +16,8 @@ try {
     app = firebase.initializeApp(firebaseConfig);
     auth = firebase.auth();
     db = firebase.firestore();
+    // PWA: keep a local copy so the installed app opens and reads offline; changes sync when back online
+    try { db.enablePersistence({ synchronizeTabs: true }).catch(function () {}); } catch (e) {}
 } catch (e) {
     console.error("Firebase init error:", e);
 }

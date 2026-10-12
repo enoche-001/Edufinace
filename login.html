@@ -23,8 +23,8 @@
             --text-main: #0F172A;
             --text-muted: #64748B;
             --border-color: #E2E8F0;
-            --primary: #2563EB;
-            --primary-hover: #1D4ED8;
+            --primary: #4318FF;
+            --primary-hover: #3311DB;
             --success: #059669;
             --danger: #DC2626;
             --warning: #D97706;
@@ -60,7 +60,8 @@
             display: flex; align-items: center; justify-content: center;
             gap: 8px; text-decoration: none; margin-bottom: 28px;
         }
-        .logo-icon { font-size: 1.35rem; color: var(--primary); }
+        .logo-header .logo-mark { width: 36px; height: 38px; flex: none; }
+        .logo-header .wm { font-size: 1.4rem; }
         .logo-text { font-size: 1.1rem; font-weight: 700; color: var(--text-main); }
 
         .auth-title {
@@ -117,7 +118,7 @@
             padding: 13px 16px; border-radius: 12px; color: var(--text-main);
             font-size: 0.95rem; outline: none; transition: var(--transition); font-family: inherit; width: 100%;
         }
-        .form-control:focus { border-color: var(--primary); background: #FFF; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
+        .form-control:focus { border-color: var(--primary); background: #FFF; box-shadow: 0 0 0 3px rgba(67, 24, 255, 0.12); }
         .form-group-row { display: flex; gap: 14px; }
         .flex-1 { flex: 1; min-width: 0; }
 
@@ -160,15 +161,27 @@
             .auth-title { font-size: 1.5rem; }
         }
     </style>
+<meta name="theme-color" content="#4318FF">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="EduFinance">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="stylesheet" href="pwa.css?v=20261010p">
+<script src="pwa.js?v=20261010p" defer></script>
 </head>
 <body class="auth-body">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><symbol id="logo" viewBox="0 0 120 126"><defs><linearGradient id="efP" gradientUnits="userSpaceOnUse" x1="10" y1="4" x2="100" y2="120"><stop offset="0" stop-color="#5B3DFF"/><stop offset="1" stop-color="#2B1C9E"/></linearGradient><linearGradient id="efG" gradientUnits="userSpaceOnUse" x1="60" y1="70" x2="100" y2="124"><stop offset="0" stop-color="#2EE0B0"/><stop offset="1" stop-color="#05A67A"/></linearGradient></defs><path d="M8 23 56 5l48 18-48 15Z" fill="url(#efP)" stroke="url(#efP)" stroke-width="4" stroke-linejoin="round"/><path d="M13 26v24" stroke="#3A22D6" stroke-width="2.4" stroke-linecap="round" fill="none"/><rect x="9.5" y="49" width="7" height="12" rx="2.6" fill="#2B1C9E"/><g transform="translate(0 6)"><path d="M42 40H86A6 6 0 0 1 92 46V50A6 6 0 0 1 86 56H38V67H76A5 5 0 0 1 81 72V76A5 5 0 0 1 76 81H38V94H50A5 5 0 0 1 55 99V105A5 5 0 0 1 50 110H42A22 22 0 0 1 20 88V62A22 22 0 0 1 42 40Z" fill="url(#efP)" stroke="url(#efP)" stroke-width="1.6" stroke-linejoin="round"/><rect x="60" y="94" width="10" height="16" rx="2.4" fill="url(#efG)"/><rect x="73" y="87" width="10" height="23" rx="2.4" fill="url(#efG)"/><rect x="86" y="78" width="10" height="32" rx="2.4" fill="url(#efG)"/><path d="M52 116C82 116 104 102 104 68" fill="none" stroke="url(#efG)" stroke-width="4.6" stroke-linecap="round"/><path d="M104 56 96.5 69h15z" fill="url(#efG)" stroke="url(#efG)" stroke-width="2" stroke-linejoin="round"/></g></symbol></defs></svg>
     <div class="auth-wrapper">
 
         <!-- ================= LOGIN ================= -->
         <div id="login-section" class="auth-card">
             <a href="index.html" class="logo-header">
-                <i class="fa-solid fa-graduation-cap logo-icon"></i>
-                <span class="logo-text">EduFinance</span>
+                <svg class="logo-mark" viewBox="0 0 120 126" aria-hidden="true" focusable="false"><use href="#logo"/></svg>
+                <span class="wm">Edu<b>finance</b></span>
             </a>
             <h1 class="auth-title">Welcome back</h1>
 
@@ -202,8 +215,8 @@
         <!-- ================= SIGNUP (3 steps) ================= -->
         <div id="signup-section" class="auth-card hidden">
             <a href="index.html" class="logo-header">
-                <i class="fa-solid fa-graduation-cap logo-icon"></i>
-                <span class="logo-text">EduFinance</span>
+                <svg class="logo-mark" viewBox="0 0 120 126" aria-hidden="true" focusable="false"><use href="#logo"/></svg>
+                <span class="wm">Edu<b>finance</b></span>
             </a>
             <h1 class="auth-title">Create your account</h1>
 
@@ -284,8 +297,8 @@
         <!-- ================= VERIFY EMAIL ================= -->
         <div id="verify-section" class="auth-card hidden">
             <a href="index.html" class="logo-header">
-                <i class="fa-solid fa-graduation-cap logo-icon"></i>
-                <span class="logo-text">EduFinance</span>
+                <svg class="logo-mark" viewBox="0 0 120 126" aria-hidden="true" focusable="false"><use href="#logo"/></svg>
+                <span class="wm">Edu<b>finance</b></span>
             </a>
             <div class="verify-icon"><i class="fa-solid fa-envelope-circle-check"></i></div>
             <h1 class="auth-title" style="margin-bottom: 16px;">Verify your email</h1>

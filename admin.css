@@ -87,9 +87,10 @@ body.checking .shell { visibility: hidden; }
 .sb-top { display: flex; align-items: center; gap: 12px; padding: 0 4px 22px; min-height: 62px; position: relative; }
 .sb-logo {
     width: 48px; height: 48px; border-radius: 15px; flex: none;
-    background: linear-gradient(135deg, var(--primary), #7551FF);
-    display: grid; place-items: center; color: #fff; font-size: 1.15rem;
+    background: transparent;
+    display: grid; place-items: center;
 }
+.sb-logo .logo-mark { width: 40px; height: 42px; }
 .sb-title { font-weight: 800; font-size: 1.05rem; color: var(--ink-dark); line-height: 1.15; white-space: nowrap; }
 .sb-title em { display: block; font-style: normal; font-size: 0.68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
 .sb-expand {
