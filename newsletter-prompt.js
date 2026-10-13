@@ -1,4 +1,5 @@
 /* EduFinance - first-visit newsletter prompt (landing page only).
+   Non-blocking card (page stays usable), closable with x / No / Escape, never auto-dismisses.
    Asks once. "Yes" subscribes; "No" is remembered and never asked again.
    Browsers do not let a website read a visitor's email address, so:
      - signed-in visitors: we use their account email (one tap)
@@ -18,9 +19,9 @@
     function css() {
         var s = document.createElement('style');
         s.textContent =
-            '.nlp-back{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;transition:opacity .2s}' +
+            '.nlp-back{position:fixed;z-index:2900;left:12px;right:12px;top:calc(var(--nav-h,72px) + 12px);display:flex;justify-content:flex-end;pointer-events:none;opacity:0;transition:opacity .2s}' +
             '.nlp-back.on{opacity:1}' +
-            '.nlp-card{width:100%;max-width:400px;background:#fff;color:#171d45;border-radius:22px;padding:26px 22px 20px;box-shadow:0 30px 80px rgba(0,0,0,.35);font-family:Inter,system-ui,sans-serif;transform:translateY(12px);transition:transform .25s}' +
+            '.nlp-card{position:relative;pointer-events:auto;width:100%;max-width:400px;background:#fff;color:#171d45;border-radius:22px;padding:26px 22px 20px;border:1px solid #e5e8f1;box-shadow:0 18px 44px rgba(43,54,116,.22);font-family:Inter,system-ui,sans-serif;transform:translateY(12px);transition:transform .25s}' +
             '.nlp-back.on .nlp-card{transform:none}' +
             '.nlp-ico{width:46px;height:46px;border-radius:14px;background:#8b5cf6;color:#fff;display:grid;place-items:center;font-size:20px;margin-bottom:14px}' +
             '.nlp-card h2{font-size:1.25rem;font-weight:800;margin:0 0 6px}' +
@@ -31,7 +32,8 @@
             '.nlp-row{display:flex;gap:10px}' +
             '.nlp-btn{flex:1;padding:13px;border-radius:12px;border:1px solid transparent;font:inherit;font-weight:700;cursor:pointer}' +
             '.nlp-yes{background:#8b5cf6;color:#fff}.nlp-yes:disabled{opacity:.5;cursor:default}' +
-            '.nlp-no{background:transparent;border-color:#e5e8f1;color:#646e90}';
+            '.nlp-no{background:transparent;border-color:#e5e8f1;color:#646e90}' +
+            '.nlp-x{position:absolute;top:10px;right:12px;border:0;background:none;color:#646e90;font-size:1.5rem;line-height:1;padding:4px 8px;cursor:pointer;border-radius:8px}';
         document.head.appendChild(s);
     }
 
@@ -40,7 +42,8 @@
         var back = document.createElement('div');
         back.className = 'nlp-back';
         back.innerHTML =
-            '<div class="nlp-card" role="dialog" aria-modal="true" aria-labelledby="nlpTitle">' +
+            '<div class="nlp-card" role="dialog" aria-labelledby="nlpTitle">' +
+            '<button type="button" class="nlp-x" id="nlpX" aria-label="Close">&times;</button>' +
             '<div class="nlp-ico">&#9993;</div>' +
             '<h2 id="nlpTitle">Subscribe to our newsletter?</h2>' +
             '<p id="nlpText"></p>' +
@@ -64,7 +67,7 @@
         function onKey(e) { if (e.key === 'Escape') close('declined'); }
         document.addEventListener('keydown', onKey);
         $('nlpNo').onclick = function () { close('declined'); };
-        back.addEventListener('click', function (e) { if (e.target === back) close('declined'); });
+        $('nlpX').onclick = function () { close('declined'); };
 
         async function subscribe() {
             var email = (input.value || '').trim().toLowerCase();
@@ -86,15 +89,14 @@
         function done(email, already) {
             remember('subscribed');
             back.querySelector('.nlp-card').innerHTML =
-                '<div class="nlp-ico">&#10003;</div><h2>' + (already ? "You're already subscribed" : "You're subscribed") + '</h2>' +
+                '<button type="button" class="nlp-x" id="nlpX2" aria-label="Close">&times;</button><div class="nlp-ico">&#10003;</div><h2>' + (already ? "You're already subscribed" : "You're subscribed") + '</h2>' +
                 '<p>Thanks! We will write to ' + email.replace(/[<>&]/g, '') + ' now and then.</p>' +
                 '<div class="nlp-row"><button type="button" class="nlp-btn nlp-yes" id="nlpClose">Done</button></div>';
             back.querySelector('#nlpClose').onclick = function () { close(); };
-            setTimeout(function () { close(); }, 4000);
+            back.querySelector('#nlpX2').onclick = function () { close(); };
         }
         yes.onclick = subscribe;
         input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); subscribe(); } });
-        if (!knownEmail) setTimeout(function () { input.focus(); }, 300);
     }
 
     // Wait briefly to see whether the visitor is signed in, then show the prompt.

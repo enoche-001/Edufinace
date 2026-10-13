@@ -35,15 +35,19 @@ html.is-standalone input, html.is-standalone textarea, html.is-standalone [conte
 .pwa-toast { position: fixed; z-index: 3100; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; align-items: center; gap: 14px;
   padding: 12px 14px 12px 18px; border-radius: 14px; background: #2b3674; color: #fff; font: 600 .88rem 'Plus Jakarta Sans', system-ui, sans-serif; box-shadow: 0 14px 34px rgba(0,0,0,.28); animation: eduRise .3s ease both; }
 .pwa-toast button { border: 0; border-radius: 9px; padding: 8px 14px; font: inherit; font-weight: 700; background: #05cd99; color: #04382b; cursor: pointer; }
+.pwa-toast .pwa-x2 { background: none; color: #fff; font-size: 1.3rem; line-height: 1; padding: 4px 6px; opacity: .8; }
 
 .pwa-net { position: fixed; z-index: 3200; top: calc(10px + env(safe-area-inset-top, 0px)); left: 50%; transform: translate(-50%, -140%); padding: 8px 16px; border-radius: 99px;
-  background: #2b3674; color: #fff; font: 600 .8rem 'Plus Jakarta Sans', system-ui, sans-serif; transition: transform .3s cubic-bezier(.22,.8,.3,1); pointer-events: none; }
+  background: #2b3674; color: #fff; font: 600 .8rem 'Plus Jakarta Sans', system-ui, sans-serif; transition: transform .3s cubic-bezier(.22,.8,.3,1); pointer-events: none; display: flex; align-items: center; gap: 10px; }
+.pwa-net.show { pointer-events: auto; }
+.pwa-net .pwa-net-x { border: 0; background: none; color: #fff; font-size: 1.15rem; line-height: 1; padding: 0 2px; cursor: pointer; opacity: .85; }
 .pwa-net.show { transform: translate(-50%, 0); } .pwa-net.ok { background: #05a67a; }
 
 .pwa-sheet-bg { position: fixed; inset: 0; z-index: 3300; background: rgba(10,14,44,.5); display: flex; align-items: flex-end; justify-content: center; animation: eduPageIn .2s ease both; }
-.pwa-sheet { width: 100%; max-width: 440px; background: #fff; color: #2b3674; border-radius: 24px 24px 0 0; padding: 22px 22px calc(22px + env(safe-area-inset-bottom, 0px)); font-family: 'Plus Jakarta Sans', system-ui, sans-serif; animation: eduRise .3s ease both; }
+.pwa-sheet { position: relative; width: 100%; max-width: 440px; background: #fff; color: #2b3674; border-radius: 24px 24px 0 0; padding: 22px 22px calc(22px + env(safe-area-inset-bottom, 0px)); font-family: 'Plus Jakarta Sans', system-ui, sans-serif; animation: eduRise .3s ease both; }
 .pwa-sheet b { font-size: 1.05rem; } .pwa-sheet p { color: #707eae; line-height: 1.55; margin: 8px 0 18px; }
-.pwa-sheet button { width: 100%; border: 0; border-radius: 13px; padding: 14px; font: inherit; font-weight: 700; background: #4318ff; color: #fff; }
+.pwa-sheet .pwa-sheet-x { position: absolute; top: 10px; right: 12px; width: auto; background: none; color: #707eae; font-size: 1.5rem; line-height: 1; padding: 4px 8px; border-radius: 8px; border: 0; }
+.pwa-sheet .pwa-sheet-ok { width: 100%; border: 0; border-radius: 13px; padding: 14px; font: inherit; font-weight: 700; background: #4318ff; color: #fff; }
 
 /* Brand wordmark (Edu + finance) used next to the logo mark everywhere */
 .wm { font-weight: 800; letter-spacing: -.02em; color: #2b3674; }

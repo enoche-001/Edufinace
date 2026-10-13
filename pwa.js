@@ -1,5 +1,5 @@
 /* EduFinance PWA helper. Loaded on every page.
-   - registers the service worker and handles updates
+   - registers the service worker (update prompt only inside the app, never on the public/landing pages)
    - install prompt (Android/desktop) + Add to Home Screen help (iOS)
    - marks installed mode with html.is-standalone
    - online/offline pill
@@ -9,6 +9,9 @@
   'use strict';
   var d = document, w = window, root = d.documentElement;
   var DISMISS_KEY = 'edu_pwa_banner_dismissed';
+  // Public marketing pages: only the Install prompt may appear here (no "update" prompt).
+  var PAGE = (location.pathname.split('/').pop() || 'index').replace(/\.html$/i, '');
+  var IS_PUBLIC = /^(index|about|contact|privacy|terms)$/i.test(PAGE);
 
   function get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
@@ -66,22 +69,30 @@
   /* ---------- tiny UI helpers ---------- */
   function el(html) { var t = d.createElement('div'); t.innerHTML = html.trim(); return t.firstChild; }
   function updateToast(sw) {
+    if (IS_PUBLIC) return;               // never shown on the landing/public pages
     if (d.getElementById('pwaUpdate')) return;
-    var n = el('<div class="pwa-toast" id="pwaUpdate" role="status"><span>A new version is ready.</span><button type="button">Update</button></div>');
-    n.querySelector('button').onclick = function () { sw.postMessage('SKIP_WAITING'); n.remove(); };
+    // Non-blocking, stays until the person taps Update or the close button (no auto-dismiss)
+    var n = el('<div class="pwa-toast" id="pwaUpdate" role="status"><span>A new version is ready.</span>' +
+      '<button type="button" class="pwa-go2">Update</button><button type="button" class="pwa-x2" aria-label="Dismiss">&times;</button></div>');
+    n.querySelector('.pwa-go2').onclick = function () { sw.postMessage('SKIP_WAITING'); n.remove(); };
+    n.querySelector('.pwa-x2').onclick = function () { n.remove(); };
     d.body.appendChild(n);
   }
 
   var pill;
   function netPill() {
-    if (!pill) { pill = el('<div class="pwa-net" role="status" aria-live="polite"></div>'); d.body.appendChild(pill); }
+    if (!pill) {
+      pill = el('<div class="pwa-net" role="status" aria-live="polite"><span class="pwa-net-t"></span><button type="button" class="pwa-net-x" aria-label="Dismiss">&times;</button></div>');
+      pill.querySelector('.pwa-net-x').onclick = function () { pill.className = 'pwa-net'; };
+      d.body.appendChild(pill);
+    }
     return pill;
   }
-  var pillTimer;
+  // Stays visible until dismissed (no auto-hide); never blocks the page
   function netChange() {
-    var p = netPill(); clearTimeout(pillTimer);
-    if (navigator.onLine) { p.textContent = 'Back online'; p.className = 'pwa-net show ok'; pillTimer = setTimeout(function () { p.className = 'pwa-net'; }, 2200); }
-    else { p.textContent = "You're offline"; p.className = 'pwa-net show'; }
+    var p = netPill(), t = p.querySelector('.pwa-net-t');
+    if (navigator.onLine) { t.textContent = 'Back online'; p.className = 'pwa-net show ok'; }
+    else { t.textContent = "You're offline"; p.className = 'pwa-net show'; }
   }
   w.addEventListener('online', netChange); w.addEventListener('offline', netChange);
   d.addEventListener('DOMContentLoaded', function () { if (!navigator.onLine) netChange(); });
@@ -90,9 +101,13 @@
   function showIOSHelp() {
     if (d.getElementById('pwaIOS')) return;
     var n = el('<div class="pwa-sheet-bg" id="pwaIOS"><div class="pwa-sheet" role="dialog" aria-label="Install EduFinance">' +
+      '<button type="button" class="pwa-sheet-x" aria-label="Close">&times;</button>' +
       '<b>Install EduFinance</b><p>Tap the <em>Share</em> button in Safari, then choose <em>Add to Home Screen</em>.</p>' +
-      '<button type="button">Got it</button></div></div>');
-    n.onclick = function (e) { if (e.target === n || e.target.tagName === 'BUTTON') n.remove(); };
+      '<button type="button" class="pwa-sheet-ok">Got it</button></div></div>');
+    function closeSheet() { n.remove(); d.removeEventListener('keydown', onKey); }
+    function onKey(e) { if (e.key === 'Escape') closeSheet(); }
+    n.onclick = function (e) { if (e.target === n || e.target.tagName === 'BUTTON') closeSheet(); };
+    d.addEventListener('keydown', onKey);
     d.body.appendChild(n);
   }
 
