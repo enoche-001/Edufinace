@@ -1,6 +1,6 @@
 /* EduFinance service worker: offline app shell + safe runtime caching.
    Bump VERSION whenever you deploy changed files so installed apps update. */
-const VERSION = 'edufinance-v1.1.1';
+const VERSION = 'edufinance-v1.1.3';
 const SHELL = VERSION + '-shell';
 const RUNTIME = VERSION + '-runtime';
 

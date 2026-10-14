@@ -107,7 +107,7 @@
             head.textContent = guest ? localHeadline() : 'Ask questions about your money and get answers in plain words.';
             sub.textContent = guest
                 ? 'Sign up to chat with AI about your own spending, budgets and goals.'
-                : 'Turning this on sends a summary of your figures and recent transactions to Google Gemini.';
+                : 'Turning this on sends a summary of your figures and recent transactions to a trusted AI service.';
             openBtn.innerHTML = guest
                 ? '<i class="fa-solid fa-comment-dots"></i> Chat with AI'
                 : '<i class="fa-solid fa-wand-magic-sparkles"></i> Turn on AI insights';
