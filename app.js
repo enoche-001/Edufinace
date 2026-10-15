@@ -427,6 +427,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 date: transDateInput.value,
                 createdAt: new Date().toISOString()
             };
+            // Set by smart-add.js when the form was filled from a pasted bank alert
+            const srcEl = document.getElementById('transSource'), refEl = document.getElementById('transBankRef');
+            if (srcEl && srcEl.value) newTrans.source = srcEl.value;
+            if (refEl && refEl.value) newTrans.bankRef = refEl.value;
 
             if (currentUser) {
                 await db.collection('users').doc(currentUser.uid).collection('transactions').add(newTrans);
@@ -762,6 +766,14 @@ document.addEventListener('DOMContentLoaded', () => {
         window.scrollTo(0, 0);
     }
     window.EduUI.goTo = switchTab;
+
+    // Read-only helpers for smart-add.js and bank-link.js
+    window.EduApp = {
+        transactions: () => state.transactions,
+        categories: categories,
+        money: (n) => EduCurrency.format(n, state.profile.currency),
+        toast: showToast
+    };
 
     // Refresh keeps you on the same screen and scroll position (data reloads, the view does not reset).
     // A fresh visit (link, new tab) still starts at Home.

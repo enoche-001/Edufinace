@@ -1,6 +1,6 @@
 /* EduFinance service worker: offline app shell + safe runtime caching.
    Bump VERSION whenever you deploy changed files so installed apps update. */
-const VERSION = 'edufinance-v1.1.3';
+const VERSION = 'edufinance-v1.2.0';
 const SHELL = VERSION + '-shell';
 const RUNTIME = VERSION + '-runtime';
 
@@ -9,6 +9,7 @@ const CORE = [
   'style.css', 'dashboard.css', 'site.css', 'pwa.css',
   'app.js', 'auth.js', 'demo-data.js', 'sheets.js', 'currency.js', 'geminiapi.js', 'intelligence.js',
   'insights-ai.js', 'onboarding.js', 'mobile-nav.js', 'debts.js', 'badges.js', 'security-lock.js', 'pwa.js',
+  'alert-parser.js', 'smart-add.js', 'bank-link.js', 'bank-config.js', 'smart-add.css',
   'manifest.webmanifest', 'favicon.svg', 'icons/icon-192.png', 'icons/icon-512.png'
 ];
 
@@ -40,7 +41,7 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => !k.startsWith(VERSION)).map((k) => caches.delete(k)));
+    await Promise.all(keys.filter((k) => !k.startsWith(VERSION) && k !== 'edu-share').map((k) => caches.delete(k)));
     if (self.registration.navigationPreload) { try { await self.registration.navigationPreload.enable(); } catch (_) {} }
     await self.clients.claim();
   })());
@@ -74,8 +75,22 @@ async function navigate(e) {
   }
 }
 
+// Share target: the user shares a bank SMS/email to the installed app. The text is kept on the
+// device only (Cache Storage), then the dashboard reads it and deletes it. It is never sent to a server.
+async function handleShare(req) {
+  try {
+    const fd = await req.formData();
+    const text = [fd.get('title'), fd.get('text'), fd.get('url')].filter(Boolean).join('\n');
+    const c = await caches.open('edu-share');
+    await c.put(new Request(new URL('edu-share-pending', self.registration.scope).href),
+      new Response(JSON.stringify({ t: String(text).slice(0, 3000), at: Date.now() }), { headers: { 'Content-Type': 'application/json' } }));
+  } catch (_) {}
+  return Response.redirect(new URL('dashboard.html?shared=1', self.registration.scope).href, 303);
+}
+
 self.addEventListener('fetch', (e) => {
   const req = e.request;
+  if (req.method === 'POST' && new URL(req.url).pathname.endsWith('/share-target')) { e.respondWith(handleShare(req)); return; }
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 

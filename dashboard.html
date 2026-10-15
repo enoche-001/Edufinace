@@ -11,6 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="dashboard.css?v=20261010q">
+    <link rel="stylesheet" href="smart-add.css?v=20261016a">
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -67,6 +68,7 @@
 
         <!-- ================= HOME ================= -->
         <section id="dashboard-tab" class="tab-content active">
+            <button type="button" class="inbox-banner" id="bankInboxBanner" hidden><i class="fa-solid fa-building-columns"></i><span id="bankInboxBannerText"></span><em>Review</em></button>
             <div class="overview">
                 <div class="hero">
                     <div class="hero-top">
@@ -125,6 +127,15 @@
                     <div class="card quick-card o-quick">
                         <div class="sec-head"><h2>Add transaction</h2></div>
                         <form id="quickAddForm" class="form">
+                            <div class="paste-box" id="pasteBox">
+                                <button type="button" class="paste-btn" id="pasteAlertBtn"><i class="fa-solid fa-paste"></i><span>Paste bank alert</span></button>
+                                <div class="paste-manual" id="pasteManual" hidden>
+                                    <textarea id="pasteAlertText" rows="3" maxlength="1500" placeholder="Paste your bank alert here" aria-label="Bank alert text"></textarea>
+                                </div>
+                                <div class="paste-result" id="pasteResult" hidden aria-live="polite"></div>
+                            </div>
+                            <input type="hidden" id="transSource" value="">
+                            <input type="hidden" id="transBankRef" value="">
                             <div class="seg" id="transTypeSeg">
                                 <button type="button" class="seg-btn is-expense active" data-type="expense">Expense</button>
                                 <button type="button" class="seg-btn is-income" data-type="income">Income</button>
@@ -506,6 +517,11 @@
                 </div>
 
                 <div class="stack" id="profileSideStack">
+                    <div class="card" data-auth="user" id="bankLinkCard">
+                        <div class="sec-head"><h2>Bank link</h2><span class="demo-tag" id="bankDemoTag">Demo</span></div>
+                        <p class="bank-card-status" id="bankLinkStatus">No bank linked.</p>
+                        <button type="button" class="btn btn-ghost btn-full" id="bankLinkBtn"><i class="fa-solid fa-building-columns"></i> Link a bank account</button>
+                    </div>
                     <details class="card fold-card">
                         <summary>Change password</summary>
                         <form id="passwordForm" class="form">
@@ -790,6 +806,30 @@
     </form>
 </div>
 
+<!-- Bank inbox: transactions that came from a bank, waiting for review -->
+<div class="sheet" id="bankInboxSheet" role="dialog" aria-label="Bank inbox">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title-row"><h3>From your bank</h3><button type="button" class="sheet-close" data-close-sheet aria-label="Close"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="sheet-body">
+        <button type="button" class="btn btn-ghost btn-full bi-all" id="bankInboxAll" hidden>Add all with suggested categories</button>
+        <div id="bankInboxList"></div>
+    </div>
+</div>
+
+<!-- Link a bank -->
+<div class="sheet" id="bankLinkSheet" role="dialog" aria-label="Link a bank account">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title-row"><h3>Link a bank account</h3><button type="button" class="sheet-close" data-close-sheet aria-label="Close"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="sheet-body" id="bankLinkBody"></div>
+</div>
+
+<!-- Clipboard: a bank alert was copied -->
+<div class="clip-banner" id="clipBanner" hidden role="status">
+    <i class="fa-solid fa-paste"></i><span id="clipBannerText"></span>
+    <button type="button" class="clip-use" id="clipUse">Use</button>
+    <button type="button" class="clip-x" id="clipDismiss" aria-label="Dismiss"><i class="fa-solid fa-xmark"></i></button>
+</div>
+
 <!-- Demo: sign-up prompt -->
 <div class="sheet" id="authSheet" role="dialog" aria-label="Create an account">
     <div class="sheet-handle"></div>
@@ -815,10 +855,14 @@
 <script src="intelligence.js?v=20261010a"></script>
 <script src="insights-ai.js?v=20261014a"></script>
 <script src="onboarding.js?v=20261010a"></script>
-<script src="app.js?v=20261010q"></script>
+<script src="alert-parser.js?v=20261016a"></script>
+<script src="app.js?v=20261016a"></script>
 <script src="mobile-nav.js?v=20261010a"></script>
 <script src="debts.js?v=20261010a"></script>
 <script src="badges.js?v=20261010a"></script>
 <script src="security-lock.js?v=20261010d"></script>
+<script src="bank-config.js?v=20261016a"></script>
+<script src="smart-add.js?v=20261016a"></script>
+<script src="bank-link.js?v=20261016a"></script>
 </body>
 </html>
