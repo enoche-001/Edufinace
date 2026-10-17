@@ -1,9 +1,7 @@
-/* Bank link settings.
-   mode "demo"  -> works today, no company papers needed: fake bank + test alerts.
-   mode "mono"  -> real linking through Mono. Fill in the two values below after you deploy /server
-                   (see BANK_SETUP_GUIDE.md). The public key is safe to ship; the SECRET key never goes here. */
+/* Bank link settings (Mono).
+   Use your Mono TEST keys while you verify (test_pk_...). Switch to live keys only after Mono approves your business.
+   The public key is safe to ship. The SECRET key lives only on the server (see BANK_SETUP_GUIDE.md). */
 window.EDU_BANK_CONFIG = {
-    mode: 'demo',
-    monoPublicKey: '',          // e.g. test_pk_xxxxxxxx (from the Mono dashboard)
-    apiBase: ''                 // e.g. https://edufinance-bank.vercel.app (your deployed /server)
+    monoPublicKey: 'test_pk_oxy2wlxfcu32122x19jr',          // e.g. test_pk_xxxxxxxx
+    apiBase: 'https://edufinanceapi.vercel.app'   // your existing Vercel project (same one as Gemini)
 };

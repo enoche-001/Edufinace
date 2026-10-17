@@ -6,14 +6,13 @@ Two features were added. Both fill the same review step, so the user always chec
 |---|---|---|---|
 | Paste a bank alert (button, paste box, clipboard banner) | No | No | Real, works offline |
 | Share an SMS/email to the installed app (Android) | No | No | Real, works offline |
-| Link bank (Demo mode): fake bank + test alerts | No | No | Demo, for showing the idea |
-| Link bank (Mono, real) | Test mode: no. Live mode: Mono will almost certainly ask for a registered business | Yes (small, included in `/server`) | Built, needs your keys |
+| Link bank through Mono | Test mode: no. Live mode: Mono will almost certainly ask for a registered business | Yes (small, included in `/server`) | Built for Mono test mode, not yet verified by you |
 
 ---
 
 ## Part A: Put the update live (do these in order)
 
-1. **Publish the new Firestore rules first.** Open `FIREBASE_RULES.md`, copy the rules block into Firebase Console > Firestore Database > Rules > Publish. Without this, linking a demo bank and the bank inbox will fail with "Could not save".
+1. **Publish the new Firestore rules first.** Open `FIREBASE_RULES.md`, copy the rules block into Firebase Console > Firestore Database > Rules > Publish. Without this, the bank inbox will fail with "Could not save".
 2. Upload every file in the zip to your host, keeping the same folder layout. New files: `alert-parser.js`, `smart-add.js`, `bank-link.js`, `bank-config.js`, `smart-add.css`, and the `server/` folder (only needed for real linking; do not upload `server/` to your static host).
 3. Changed files: `dashboard.html`, `app.js`, `sw.js`, `manifest.webmanifest`, `FIREBASE_RULES.md`.
 4. `sw.js` VERSION is already bumped to `edufinance-v1.2.0`, so installed apps show the Update toast. Open the app once online to let it cache the new files.
@@ -42,52 +41,61 @@ Share target: in your SMS app, select the alert text, tap Share, pick EduFinance
 
 **Banks tested:** GTBank, Access, UBA, Zenith, First Bank, Opay, Kuda style messages. Banks change wording often. If one fails, send me the text (hide your account number) and I will extend `alert-parser.js`.
 
-## Part C: Demo the bank link (no CAC needed)
+## Part C: Bank linking with Mono (test mode), step by step
 
-1. Profile > **Bank link** > Link a bank account > pick any bank > confirm. It is labelled **Demo** everywhere.
-2. In the sheet tap **Money out**, **Money in** or **Send 3**. A fake alert arrives in the inbox about a second later and the Home screen shows "N new transactions from your bank".
-3. Tap Review, edit the description or category, tap Add.
+Your existing Vercel project is `edufinanceapi.vercel.app` (the one that serves Gemini). Use it. Do not make a new one.
 
-Be upfront with anyone you demo this to: nothing real is connected. The Demo tag stays visible so nobody thinks it is a live bank connection.
+**Step 1: Mono account**
+1. Sign up at mono.co and create an app.
+2. Switch the dashboard to Test mode.
+3. Copy the public key (`test_pk_...`) and secret key (`test_sk_...`).
 
-## Part D: Real bank linking with Mono (when you are ready)
+**Step 2: Firebase key for the server**
+1. Firebase Console > Project settings > Service accounts > Generate new private key.
+2. Open the downloaded file and copy everything inside. Keep it private.
 
-Mono is a Nigerian open banking provider (now part of Flutterwave). It has a free test mode with simulated banks. I built the code from Mono's published flow but could not run it against your Mono account, so verify each step in the sandbox before trusting it. Field names and endpoints can change, so keep https://docs.mono.co open while you do this.
+**Step 3: Add the 3 files to your Gemini repo**
+1. Open the GitHub repo that has `api/gemini.js`.
+2. Copy `_lib.js`, `mono.js`, `mono-webhook.js` from `server/api/` in the zip into that repo's `api/` folder.
+3. Open the repo's `package.json` and add `"firebase-admin": "^12.0.0"` under `dependencies`.
+4. Commit and push.
 
-**1. Mono account.** Sign up at mono.co, create an app, switch the dashboard to **Test mode**. Copy the test public key (`test_pk_...`) and test secret key (`test_sk_...`).
+**Step 4: Vercel settings**
+1. Vercel > project `edufinanceapi` > Settings > Environment Variables.
+2. Add these (leave your Gemini key alone):
+   - `MONO_SECRET_KEY` = your `test_sk_` key
+   - `MONO_WEBHOOK_SECRET` = a long random string you make up
+   - `MONO_AMOUNT_IN_KOBO` = `true`
+   - `FIREBASE_SERVICE_ACCOUNT` = the Firebase JSON from Step 2, on one line
+   - `ALLOWED_ORIGINS` = the exact address where EduFinance runs, e.g. `https://edufinance.app`
+3. Redeploy the project.
 
-**2. Firebase service account.** Firebase Console > Project settings > Service accounts > Generate new private key. Keep the JSON file private.
+**Step 5: Mono webhook**
+1. Mono dashboard > Webhooks.
+2. URL: `https://edufinanceapi.vercel.app/api/mono-webhook`
+3. Secret: the same string as `MONO_WEBHOOK_SECRET`.
 
-**3. Deploy the server.** Put the `server/` folder in its own Git repo (or its own Vercel project with Root Directory set to `server`). In Vercel > Settings > Environment Variables, add every line from `server/.env.example` with your real values. `FIREBASE_SERVICE_ACCOUNT` is the whole JSON on one line. `ALLOWED_ORIGINS` must contain the exact address where EduFinance runs. Deploy. You will get a URL such as `https://edufinance-bank.vercel.app`.
+**Step 6: Put your public key in the app**
+1. Open `bank-config.js` (the server address is already filled in).
+2. Paste your `test_pk_` key into `monoPublicKey`.
+3. Upload the app files to your host. Bump `VERSION` in `sw.js` if the app does not update.
 
-**4. Webhook.** Mono dashboard > Webhooks: set the URL to `https://YOUR-SERVER/api/mono-webhook` and a secret. Put the same secret in `MONO_WEBHOOK_SECRET`.
+**Step 7: Publish the Firestore rules** from `FIREBASE_RULES.md` (Firebase Console > Firestore > Rules > Publish).
 
-**5. Point the app at it.** Edit `bank-config.js`:
+**Step 8: Test**
+1. Open the app, sign in, Profile > Bank link > Connect with Mono.
+2. Choose a test bank and use the sandbox login from Mono's docs.
+3. Tap Sync now. Transactions appear under "New transactions from your bank" on Home.
+4. If amounts are 100x wrong, set `MONO_AMOUNT_IN_KOBO` to `false` and redeploy.
 
-```js
-window.EDU_BANK_CONFIG = {
-    mode: 'mono',
-    monoPublicKey: 'test_pk_xxxxxxxx',
-    apiBase: 'https://edufinance-bank.vercel.app'
-};
-```
+Going live later needs Mono to approve your business (likely the CAC part). Stay on test keys until then. Mono's endpoint and field names can change, so keep https://docs.mono.co open while testing.
 
-Re-upload and bump `VERSION` in `sw.js`.
-
-**6. Try it.** Profile > Bank link > Connect with Mono. Pick a test bank and use the sandbox credentials from Mono's docs. The server swaps the one-time code for an account id, saves the link, and fetches transactions into the bank inbox. **Sync now** pulls again on demand.
-
-**7. Check these in the sandbox.** Mono amounts are usually in kobo. If your sandbox amounts look 100x too big or small, set `MONO_AMOUNT_IN_KOBO=false`. Also confirm the webhook header name (`mono-webhook-secret`) and the event name (`mono.events.account_updated`) match the dashboard.
-
-**8. Going live.** Live keys need Mono to approve your business. That is where the CAC certificate usually comes in. Until then, stay in test mode and keep the app on Demo for real users.
-
-**What real linking does not do:** it does not give instant per-transaction push by itself. It syncs when Mono says new data is ready, or when the user taps Sync now. Ask Mono whether real-time transaction webhooks are available on your plan.
-
-## Part E: Real alternatives that do not need CAC
+## Part D: Real alternatives that do not need CAC
 
 - **Paste and Share (already built)**: the honest, working answer today. Most users already get an SMS or email alert for every transaction.
 - **Email forwarding (not built)**: give each user a private address; they auto-forward bank alert emails to it; a small server parses them with the same parser. Possible with an inbound email service. Tell me if you want it.
 
-## Part F: Privacy and trust (do before real users)
+## Part E: Privacy and trust (do before real users)
 
 - Update `privacy.html` and `terms.html`: say that pasted alert text is read on the device and only the amount, date, description and bank name are saved; bank linking (when live) is read-only through Mono; users can unlink anytime. Under Nigeria's data protection law you should say what you collect and why. This is not legal advice.
 - Never ask for bank passwords, PINs, OTPs or card numbers. The app never does, and the paste parser ignores account numbers.
@@ -97,7 +105,7 @@ Re-upload and bump `VERSION` in `sw.js`.
 
 | Problem | Fix |
 |---|---|
-| "Could not save" when linking the demo bank | Publish the new rules (Part A, step 1) |
+| "Could not save" in the bank inbox | Publish the new rules (Part A, step 1) |
 | Paste button does nothing | Browser blocked clipboard access. Use the paste box that appears. Needs HTTPS |
 | Share option missing | Reinstall the PWA. Only Android Chrome supports it |
 | Alert not understood | Paste the full alert, not a screenshot. Send me the text and I will extend the parser |

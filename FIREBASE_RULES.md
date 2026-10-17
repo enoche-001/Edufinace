@@ -55,8 +55,8 @@ service cloud.firestore {
         && d.get('phone', '') is string && d.get('phone', '').size() <= 20;
     }
 
-    // Bank inbox items (alerts waiting for the user to review). Written by the app (demo and
-    // pasted alerts) or by the server (Mono sync, which bypasses these rules).
+    // Bank inbox items (alerts waiting for the user to review). Written by the app (pasted alerts)
+    // or by the server (Mono sync, which bypasses these rules).
     function validInbox(d) {
       return d.keys().hasOnly(['amount', 'type', 'description', 'category', 'date', 'bank', 'bankRef', 'source', 'status', 'createdAt'])
         && d.amount is number && d.amount > 0 && d.amount <= 1000000000000
@@ -66,7 +66,7 @@ service cloud.firestore {
         && d.date is string && d.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && d.bank is string && d.bank.size() <= 30
         && d.bankRef is string && d.bankRef.size() > 0 && d.bankRef.size() <= 60
-        && d.source in ['demo', 'alert']
+        && d.source == 'alert'
         && d.status == 'pending';
     }
 
@@ -105,17 +105,11 @@ service cloud.firestore {
       allow create, update, delete: if isOwner(userId) && hasValidProfile(userId);
     }
 
-    // Linked bank accounts. The app can only create DEMO links; real links are created by the
-    // server after the bank connection succeeds. The owner can read and remove their own links.
+    // Linked bank accounts. Created and removed only by the server (after Mono confirms the
+    // connection). The owner can read their own links.
     match /users/{userId}/bankLinks/{id} {
-      allow read, delete: if isOwner(userId);
-      allow create: if isOwner(userId) && hasValidProfile(userId)
-        && request.resource.data.keys().hasOnly(['bank', 'last4', 'demo', 'status', 'createdAt'])
-        && request.resource.data.demo == true
-        && request.resource.data.bank is string && request.resource.data.bank.size() <= 30
-        && request.resource.data.last4 is string && request.resource.data.last4.size() == 4
-        && request.resource.data.status == 'active';
-      allow update: if false;
+      allow read: if isOwner(userId);
+      allow write: if false;
     }
 
     // Bank inbox. The owner reviews items; the only edit allowed is changing the status.
@@ -207,7 +201,7 @@ service cloud.firestore {
 - Other data (transactions, goals, budgets, planner) cannot be written until that profile exists, and, for new email sign-ups, until the email is verified.
 - Owe / Owed records are checked for a name, a positive amount and a valid direction.
 - Users can only ever read and write their own data.
-- Bank link and bank inbox: the app can only create DEMO links and pending inbox items in the expected shape. Admins cannot read them (no admin read rule is added on purpose, bank data stays private).
+- Bank link and bank inbox: bank links can only be created by the server; the app can only queue pasted alerts in the expected shape. Admins cannot read them (no admin read rule is added on purpose, bank data stays private).
 - Admins (UIDs listed in the `admins` collection) can READ all user data for the admin dashboard, but cannot change it.
 - The `admins` collection cannot be written from the app, so nobody can make themselves an admin.
 

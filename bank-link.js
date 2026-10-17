@@ -1,28 +1,17 @@
 /* =========================================
    EduFinance - Bank link + Bank inbox
-   - Profile > "Bank link" card: connect an account (DEMO mode now, Mono later)
-   - Everything that arrives from a bank (demo alerts, Mono sync, multi-alert paste)
+   - Profile > "Bank link" card: connect a real account through Mono (use Mono TEST keys until verified)
+   - Everything that arrives from a bank (Mono sync, multi-alert paste)
      lands in users/{uid}/bankInbox as "pending". The user reviews, edits and adds it.
    - Banks are READ-ONLY here. This file never sees a bank password or can move money.
-   Config lives in bank-config.js. Server side (real mode only) is in /server.
+   Config lives in bank-config.js. The server that talks to Mono is in /server.
    ========================================= */
 (function () {
     'use strict';
     var $ = function (id) { return document.getElementById(id); };
-    var CFG = window.EDU_BANK_CONFIG || { mode: 'demo' };
-    var BANKS = ['Opay', 'Kuda', 'Moniepoint', 'PalmPay', 'GTBank', 'Access Bank', 'UBA', 'Zenith Bank', 'First Bank', 'Wema / ALAT'];
-    var DEMO_ALERTS = [
-        { type: 'expense', amount: 1800, description: 'Bolt ride', category: 'Transport & Transit' },
-        { type: 'expense', amount: 12400, description: 'Shoprite Lekki', category: 'Groceries & Food' },
-        { type: 'expense', amount: 2000, description: 'MTN data bundle', category: 'Subscriptions & Tech' },
-        { type: 'expense', amount: 3500, description: 'Netflix', category: 'Subscriptions & Tech' },
-        { type: 'expense', amount: 2500, description: 'Photocopy and printing', category: 'Tuition & Books' },
-        { type: 'income', amount: 20000, description: 'From Mum', category: 'Allowance / Parents' },
-        { type: 'income', amount: 15000, description: 'From Chinedu Okafor', category: 'Freelance / Side Gig' },
-        { type: 'income', amount: 50000, description: 'Part-time job pay', category: 'Part-time Job / Salary' }
-    ];
-
-    var db, auth, uid = null, links = [], inbox = [], unsubL = null, unsubI = null, step = 'pick', picked = '';
+    var CFG = window.EDU_BANK_CONFIG || {};
+    var TEST = /^test_/.test(CFG.monoPublicKey || '');
+    var db, auth, uid = null, links = [], inbox = [], unsubL = null, unsubI = null;
 
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c]; }); }
     function toast(m, t) { if (window.EduApp) window.EduApp.toast(m, t || 'info'); }
@@ -100,7 +89,7 @@
             var cat = suggest(it);
             return '<div class="bi-item" data-id="' + esc(it.id) + '">' +
                 '<div class="bi-top"><b class="bi-amt ' + (it.type === 'income' ? 'income' : 'expense') + '">' + (it.type === 'income' ? '+' : '-') + esc(money(it.amount)) + '</b>' +
-                '<span class="bi-meta">' + esc([it.bank, it.date].filter(Boolean).join(' \u00b7 ')) + (it.source === 'demo' ? ' <i class="demo-tag">Demo</i>' : '') + '</span></div>' +
+                '<span class="bi-meta">' + esc([it.bank, it.date].filter(Boolean).join(' \u00b7 ')) + '</span></div>' +
                 '<input type="text" class="form-control bi-desc" maxlength="80" value="' + esc(it.description) + '" aria-label="Description">' +
                 '<select class="form-control bi-cat" aria-label="Category">' + catOptions(it.type, cat) + '</select>' +
                 '<div class="bi-actions"><button type="button" class="btn btn-ghost btn-sm" data-act="skip">Skip</button>' +
@@ -135,65 +124,26 @@
     // ---------- bank link card (Profile) + sheet ----------
     function renderCard() {
         var s = $('bankLinkStatus'), b = $('bankLinkBtn'); if (!s || !b) return;
-        var active = links.filter(function (l) { return l.status !== 'removed'; });
-        if (!active.length) { s.textContent = CFG.mode === 'demo' ? 'No bank linked. Demo mode: nothing real is connected.' : 'No bank linked.'; b.textContent = 'Link a bank account'; }
-        else { s.textContent = active.map(function (l) { return l.bank + ' \u2022\u2022' + l.last4 + (l.demo ? ' (demo)' : ''); }).join(', '); b.textContent = 'Manage'; }
+        if (!links.length) { s.textContent = 'No bank linked.'; b.textContent = 'Link a bank account'; }
+        else { s.textContent = links.map(function (l) { return l.bank + ' \u2022\u2022' + l.last4; }).join(', '); b.textContent = 'Manage'; }
     }
 
     function renderLinkSheet() {
         var body = $('bankLinkBody'); if (!body) return;
-        var active = links.filter(function (l) { return l.status !== 'removed'; });
         var html = '';
-        if (active.length && step === 'list') {
-            html += active.map(function (l) {
-                return '<div class="link-row" data-id="' + esc(l.id) + '"><div><b>' + esc(l.bank) + ' \u2022\u2022' + esc(l.last4) + '</b>' +
-                    '<small>' + (l.demo ? '<i class="demo-tag">Demo</i> ' : '') + 'Read-only. Linked ' + esc(String(l.createdAt || '').slice(0, 10)) + '</small></div>' +
-                    '<button type="button" class="btn btn-danger btn-sm" data-act="unlink">Unlink</button></div>';
-            }).join('');
-            if (active.some(function (l) { return l.demo; })) {
-                html += '<div class="link-demo"><span class="field-label">Try it: send a test bank alert</span>' +
-                    '<div class="demo-btns"><button type="button" class="btn btn-ghost btn-sm" data-act="sim" data-kind="expense">Money out</button>' +
-                    '<button type="button" class="btn btn-ghost btn-sm" data-act="sim" data-kind="income">Money in</button>' +
-                    '<button type="button" class="btn btn-ghost btn-sm" data-act="sim" data-kind="both">Send 3</button></div>' +
-                    '<small class="text-muted">The alert appears in your bank inbox in a moment. This is fake data for testing.</small></div>';
-            }
-            if (CFG.mode === 'mono') html += '<button type="button" class="btn btn-ghost btn-full" data-act="sync">Sync now</button>';
-            html += '<button type="button" class="link-btn" data-act="addmore">Link another account</button>';
-        } else if (CFG.mode === 'mono') {
-            html += '<p class="text-muted bl-copy">Connect your bank securely through Mono. EduFinance can only read your transactions. It cannot move money and never sees your bank password.</p>' +
-                '<button type="button" class="btn btn-primary btn-full" data-act="mono">Connect with Mono</button>';
-        } else if (step === 'consent') {
-            html += '<p class="bl-copy"><b>' + esc(picked) + '</b> (demo)</p>' +
-                '<ul class="bl-list"><li>EduFinance can read transactions only</li><li>It cannot move money</li><li>You can unlink at any time</li></ul>' +
-                '<p class="text-muted bl-copy">Demo mode: no real bank is contacted. Test alerts are created for you.</p>' +
-                '<button type="button" class="btn btn-primary btn-full" data-act="confirm">Link ' + esc(picked) + ' (demo)</button>' +
-                '<button type="button" class="link-btn" data-act="back">Choose another bank</button>';
-        } else {
-            html += '<p class="text-muted bl-copy">Pick your bank. Demo mode: nothing real is connected.</p><div class="bank-grid">' +
-                BANKS.map(function (n) { return '<button type="button" class="bank-pick" data-act="pick" data-bank="' + esc(n) + '">' + esc(n) + '</button>'; }).join('') + '</div>';
-        }
+        if (TEST) html += '<p class="bl-copy"><i class="demo-tag">Test mode</i> Use the sandbox bank details from Mono. No real bank is contacted.</p>';
+        html += links.map(function (l) {
+            return '<div class="link-row" data-id="' + esc(l.id) + '"><div><b>' + esc(l.bank) + ' \u2022\u2022' + esc(l.last4) + '</b>' +
+                '<small>Read-only. Linked ' + esc(String(l.createdAt || '').slice(0, 10)) + (l.lastSyncedAt ? ' \u00b7 synced ' + esc(String(l.lastSyncedAt).slice(0, 10)) : '') + '</small></div>' +
+                '<button type="button" class="btn btn-danger btn-sm" data-act="unlink">Unlink</button></div>';
+        }).join('');
+        if (links.length) html += '<button type="button" class="btn btn-ghost btn-full" data-act="sync" style="margin-top:12px">Sync now</button>';
+        else html += '<p class="text-muted bl-copy">Connect your bank securely through Mono. EduFinance can only read your transactions. It cannot move money and never sees your bank password.</p>';
+        html += '<button type="button" class="btn ' + (links.length ? 'link-btn' : 'btn-primary btn-full') + '" data-act="mono">' + (links.length ? 'Link another account' : 'Connect with Mono') + '</button>';
         body.innerHTML = html;
     }
 
-    function openLinkSheet() {
-        step = links.some(function (l) { return l.status !== 'removed'; }) ? 'list' : 'pick';
-        renderLinkSheet(); window.EduUI.open($('bankLinkSheet'));
-    }
-
-    function simulate(kind) {
-        var pool = DEMO_ALERTS.filter(function (a) { return kind === 'both' || a.type === kind; });
-        var n = kind === 'both' ? 3 : 1, picks = [];
-        while (picks.length < n) { var a = pool[Math.floor(Math.random() * pool.length)]; if (picks.indexOf(a) === -1) picks.push(a); }
-        var bank = (links.filter(function (l) { return l.demo; })[0] || {}).bank || 'Demo Bank';
-        var items = picks.map(function (a, i) {
-            return { amount: a.amount, type: a.type, description: a.description, category: a.category, date: todayStr(), bank: bank, ref: 'demo' + Date.now().toString(36) + i + Math.floor(Math.random() * 1e4) };
-        });
-        toast('Sending test alert', 'info');
-        setTimeout(function () {
-            addToInbox(items, 'demo').then(function () { toast('New transaction from ' + bank, 'success'); window.EduUI.closeAll(); })
-                .catch(function () { toast('Could not send the test alert', 'error'); });
-        }, 1200);
-    }
+    function openLinkSheet() { renderLinkSheet(); window.EduUI.open($('bankLinkSheet')); }
 
     // ---------- real mode: Mono Connect + your server ----------
     function api(action, payload) {
@@ -233,25 +183,18 @@
         body.addEventListener('click', function (e) {
             var el = e.target.closest('[data-act]'); if (!el) return;
             var act = el.dataset.act;
-            if (act === 'pick') { picked = el.dataset.bank; step = 'consent'; renderLinkSheet(); }
-            else if (act === 'back') { step = 'pick'; renderLinkSheet(); }
-            else if (act === 'addmore') { picked = ''; if (CFG.mode === 'mono') startMono(); else { step = 'pick'; renderLinkSheet(); } }
-            else if (act === 'confirm') {
-                el.disabled = true;
-                step = 'list';      // set first: the snapshot listener re-renders as soon as the write lands locally
-                userCol('bankLinks').add({ bank: picked, last4: String(Math.floor(1000 + Math.random() * 9000)), demo: true, status: 'active', createdAt: new Date().toISOString() })
-                    .then(function () { toast('Demo bank linked', 'success'); renderLinkSheet(); })
-                    .catch(function () { step = 'consent'; renderLinkSheet(); toast('Could not link. Check your connection.', 'error'); });
-            }
+            if (act === 'mono') startMono();
             else if (act === 'unlink') {
                 var row = el.closest('.link-row'); var l = links.filter(function (x) { return x.id === row.dataset.id; })[0]; if (!l) return;
-                if (!window.confirm('Unlink ' + l.bank + '? Past transactions you added stay in the app.')) return;
-                var p = l.demo ? userCol('bankLinks').doc(l.id).delete() : api('unlink', { linkId: l.id });
-                p.then(function () { toast('Unlinked', 'info'); }).catch(function (er) { toast(er.message || 'Could not unlink', 'error'); });
+                if (!window.confirm('Unlink ' + l.bank + '? Transactions already added stay in the app.')) return;
+                el.disabled = true;
+                api('unlink', { linkId: l.id }).then(function () { toast('Unlinked', 'info'); }).catch(function (er) { el.disabled = false; toast(er.message || 'Could not unlink', 'error'); });
             }
-            else if (act === 'sim') simulate(el.dataset.kind);
-            else if (act === 'mono') startMono();
-            else if (act === 'sync') { el.disabled = true; api('sync', {}).then(function (r) { toast((r.added || 0) + ' new transactions found', 'success'); el.disabled = false; }).catch(function (er) { toast(er.message, 'error'); el.disabled = false; }); }
+            else if (act === 'sync') {
+                el.disabled = true;
+                api('sync', {}).then(function (r) { toast((r.added || 0) + ' new transactions found', 'success'); el.disabled = false; })
+                    .catch(function (er) { toast(er.message, 'error'); el.disabled = false; });
+            }
         });
     }
 
@@ -275,7 +218,7 @@
         if (!window.firebase || !firebase.apps.length || !window.EduUI || !window.EduApp) return;
         db = firebase.firestore(); auth = firebase.auth();
         bindInbox(); bindLinkSheet();
-        if (CFG.mode === 'mono' && $('bankDemoTag')) $('bankDemoTag').hidden = true;
+        if ($('bankModeTag')) $('bankModeTag').hidden = !TEST;
         window.EduBank = { addToInbox: addToInbox, openInbox: openInbox };
         auth.onAuthStateChanged(listen);
         // re-check duplicates once transactions finish loading
