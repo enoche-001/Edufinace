@@ -153,27 +153,57 @@
             });
         }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Request failed'); return j; }); });
     }
-    function loadMono() {
+    var MONO_HOSTS = ['https://connect.mono.co/connect.js', 'https://connect.withmono.com/connect.js'];
+    function monoCtor() {
+        var C = window.Connect || window.MonoConnect;
+        if (C && typeof C !== 'function' && typeof C.default === 'function') C = C.default;
+        return typeof C === 'function' ? C : null;
+    }
+    function loadScript(src) {
         return new Promise(function (resolve, reject) {
-            if (window.Connect) return resolve();
-            var s = document.createElement('script'); s.src = 'https://connect.withmono.com/connect.js';
-            s.onload = resolve; s.onerror = function () { reject(new Error('Could not load Mono. Check your internet.')); };
+            var s = document.createElement('script'); s.src = src; s.async = true;
+            s.onload = function () { monoCtor() ? resolve() : reject(new Error('Mono script loaded but Connect is missing')); };
+            s.onerror = function () { s.remove(); reject(new Error('blocked ' + src)); };
             document.head.appendChild(s);
         });
     }
+    function loadMono() {
+        if (monoCtor()) return Promise.resolve();
+        var i = 0;
+        function next() {
+            if (i >= MONO_HOSTS.length) return Promise.reject(new Error('Could not load Mono. Check your internet or ad blocker.'));
+            return loadScript(MONO_HOSTS[i++]).catch(function (e) { console.warn('[EduBank]', e.message); return next(); });
+        }
+        return next();
+    }
+    var monoBusy = false;
     function startMono() {
+        if (monoBusy) return;
         if (!CFG.monoPublicKey || !CFG.apiBase) { toast('Mono is not configured yet. See BANK_SETUP_GUIDE.md', 'error'); return; }
+        monoBusy = true; toast('Opening Mono...', 'info');
+        var opened = false, timer;
+        function done() { monoBusy = false; clearTimeout(timer); }
         loadMono().then(function () {
-            var connect = new window.Connect({
+            var Ctor = monoCtor();
+            var connect = new Ctor({
                 key: CFG.monoPublicKey,
+                onLoad: function () { opened = true; clearTimeout(timer); },
+                onClose: function () { done(); },
                 onSuccess: function (data) {
+                    done();
                     toast('Linking account', 'info');
                     api('link', { code: data && data.code }).then(function () { toast('Bank linked. Transactions will appear in your inbox.', 'success'); window.EduUI.closeAll(); })
                         .catch(function (e) { toast(e.message, 'error'); });
                 }
             });
-            connect.setup(); connect.open();
-        }).catch(function (e) { toast(e.message, 'error'); });
+            // Close our own sheet first: it sits above the Mono widget and hides it.
+            window.EduUI.closeAll();
+            connect.setup();
+            setTimeout(function () { connect.open(); }, 150);
+            timer = setTimeout(function () {
+                if (!opened) { monoBusy = false; toast('Mono did not open. Check the public key in bank-config.js and that this domain is allowed in your Mono app.', 'error'); }
+            }, 9000);
+        }).catch(function (e) { done(); console.error('[EduBank]', e); toast(e.message || 'Could not start Mono', 'error'); });
     }
 
     function bindLinkSheet() {

@@ -61,3 +61,6 @@
 .link-demo { display: flex; flex-direction: column; gap: 8px; padding: 14px 0; }
 .demo-btns { display: flex; gap: 8px; flex-wrap: wrap; }
 .bank-card-status { font-size: 0.86rem; color: var(--muted); margin-bottom: 12px; }
+
+/* Mono Connect widget must sit above sheets and the backdrop */
+iframe[src*="mono.co"], iframe[src*="withmono.com"], iframe[title*="Mono" i], [id*="mono-connect" i] { z-index: 2147483647 !important; }
