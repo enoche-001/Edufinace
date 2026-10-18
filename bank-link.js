@@ -154,7 +154,10 @@
         }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Request failed'); return j; }); });
     }
     var MONO_HOSTS = ['https://connect.mono.co/connect.js', 'https://connect.withmono.com/connect.js'];
+    var MONO_ESM = ['https://connect.mono.co/connect.js', 'https://cdn.jsdelivr.net/npm/@mono.co/connect.js/+esm', 'https://esm.sh/@mono.co/connect.js'];
+    var monoCtorCache = null;
     function monoCtor() {
+        if (monoCtorCache) return monoCtorCache;
         var C = window.Connect || window.MonoConnect;
         if (C && typeof C !== 'function' && typeof C.default === 'function') C = C.default;
         return typeof C === 'function' ? C : null;
@@ -162,17 +165,28 @@
     function loadScript(src) {
         return new Promise(function (resolve, reject) {
             var s = document.createElement('script'); s.src = src; s.async = true;
-            s.onload = function () { monoCtor() ? resolve() : reject(new Error('Mono script loaded but Connect is missing')); };
-            s.onerror = function () { s.remove(); reject(new Error('blocked ' + src)); };
+            s.onload = function () { monoCtor() ? resolve() : reject(new Error('loaded but no Connect global: ' + src)); };
+            s.onerror = function () { s.remove(); reject(new Error('could not fetch ' + src)); };
             document.head.appendChild(s);
+        });
+    }
+    function loadModule(src) {
+        return import(src).then(function (m) {
+            var C = (m && (m.default || m.Connect)) || null;
+            if (C && typeof C !== 'function' && typeof C.default === 'function') C = C.default;
+            if (typeof C !== 'function') throw new Error('module has no Connect: ' + src);
+            monoCtorCache = C;
         });
     }
     function loadMono() {
         if (monoCtor()) return Promise.resolve();
+        var errs = [];
+        var tasks = MONO_HOSTS.map(function (u) { return function () { return loadScript(u); }; })
+            .concat(MONO_ESM.map(function (u) { return function () { return loadModule(u); }; }));
         var i = 0;
         function next() {
-            if (i >= MONO_HOSTS.length) return Promise.reject(new Error('Could not load Mono. Check your internet or ad blocker.'));
-            return loadScript(MONO_HOSTS[i++]).catch(function (e) { console.warn('[EduBank]', e.message); return next(); });
+            if (i >= tasks.length) { console.error('[EduBank] Mono load failures', errs); return Promise.reject(new Error('Could not load Mono. ' + (errs[0] || '').slice(0, 90))); }
+            return tasks[i++]().catch(function (e) { errs.push(e.message); console.warn('[EduBank]', e.message); return next(); });
         }
         return next();
     }
@@ -187,8 +201,14 @@
             var Ctor = monoCtor();
             var connect = new Ctor({
                 key: CFG.monoPublicKey,
-                onLoad: function () { opened = true; clearTimeout(timer); },
+                onLoad: function () { opened = true; clearTimeout(timer); toast('Mono ready', 'info'); },
                 onClose: function () { done(); },
+                onEvent: function (name, d) {
+                    console.log('[EduBank] mono event', name, d);
+                    var n = String(name || '');
+                    if (/error|fail|invalid|denied/i.test(n)) toast('Mono: ' + n + (d && (d.errorType || d.message || d.reason) ? ' - ' + (d.errorType || d.message || d.reason) : ''), 'error');
+                    else if (n && !/^(OPENED|LOADED)$/i.test(n)) toast('Mono: ' + n, 'info');
+                },
                 onSuccess: function (data) {
                     done();
                     toast('Linking account', 'info');
@@ -201,7 +221,7 @@
             connect.setup();
             setTimeout(function () { connect.open(); }, 150);
             timer = setTimeout(function () {
-                if (!opened) { monoBusy = false; toast('Mono did not open. Check the public key in bank-config.js and that this domain is allowed in your Mono app.', 'error'); }
+                if (!opened) { monoBusy = false; toast('Mono did not open. Domain: ' + location.origin + ' - add it to your Mono app allowed origins, and confirm the test_pk key.', 'error'); }
             }, 9000);
         }).catch(function (e) { done(); console.error('[EduBank]', e); toast(e.message || 'Could not start Mono', 'error'); });
     }
