@@ -1,5 +1,5 @@
 /* EduFinance PWA helper. Loaded on every page.
-   - registers the service worker (update prompt only inside the app, never on the public/landing pages)
+   - registers the service worker (updates apply silently, no update prompt anywhere)
    - install prompt (Android/desktop) + Add to Home Screen help (iOS)
    - marks installed mode with html.is-standalone
    - online/offline pill
@@ -9,9 +9,6 @@
   'use strict';
   var d = document, w = window, root = d.documentElement;
   var DISMISS_KEY = 'edu_pwa_banner_dismissed';
-  // Public marketing pages: only the Install prompt may appear here (no "update" prompt).
-  var PAGE = (location.pathname.split('/').pop() || 'index').replace(/\.html$/i, '');
-  var IS_PUBLIC = /^(index|about|contact|privacy|terms)$/i.test(PAGE);
 
   function get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
@@ -45,40 +42,34 @@
     }
   };
 
-  /* ---------- service worker + updates ---------- */
+  /* ---------- service worker (silent updates, no prompt) ---------- */
+  // A new version is applied only while the app is in the background, so nothing ever
+  // interrupts the person or reloads a page they are using.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
-    var reloading = false;
+    var swReg = null, reloading = false;
     navigator.serviceWorker.addEventListener('controllerchange', function () {
-      if (reloading) return; reloading = true; location.reload();
+      if (reloading || !d.hidden) return;
+      reloading = true; location.reload();
     });
     w.addEventListener('load', function () {
       navigator.serviceWorker.register('sw.js').then(function (reg) {
+        swReg = reg;
         function watch(sw) {
           sw.addEventListener('statechange', function () {
-            if (sw.state === 'installed' && navigator.serviceWorker.controller) updateToast(sw);
+            if (sw.state === 'installed' && navigator.serviceWorker.controller && d.hidden) sw.postMessage('SKIP_WAITING');
           });
         }
-        if (reg.waiting && navigator.serviceWorker.controller) updateToast(reg.waiting);
         reg.addEventListener('updatefound', function () { if (reg.installing) watch(reg.installing); });
-        // re-check for a new version whenever the app comes back to the foreground
-        d.addEventListener('visibilitychange', function () { if (!d.hidden) reg.update().catch(function () {}); });
+        d.addEventListener('visibilitychange', function () {
+          if (d.hidden) { if (reg.waiting) reg.waiting.postMessage('SKIP_WAITING'); }
+          else reg.update().catch(function () {});
+        });
       }).catch(function () {});
     });
   }
 
   /* ---------- tiny UI helpers ---------- */
   function el(html) { var t = d.createElement('div'); t.innerHTML = html.trim(); return t.firstChild; }
-  function updateToast(sw) {
-    if (IS_PUBLIC) return;               // never shown on the landing/public pages
-    if (d.getElementById('pwaUpdate')) return;
-    // Non-blocking, stays until the person taps Update or the close button (no auto-dismiss)
-    var n = el('<div class="pwa-toast" id="pwaUpdate" role="status"><span>A new version is ready.</span>' +
-      '<button type="button" class="pwa-go2">Update</button><button type="button" class="pwa-x2" aria-label="Dismiss">&times;</button></div>');
-    n.querySelector('.pwa-go2').onclick = function () { sw.postMessage('SKIP_WAITING'); n.remove(); };
-    n.querySelector('.pwa-x2').onclick = function () { n.remove(); };
-    d.body.appendChild(n);
-  }
-
   var pill;
   function netPill() {
     if (!pill) {
