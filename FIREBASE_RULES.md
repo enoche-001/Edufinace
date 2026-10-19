@@ -56,7 +56,7 @@ service cloud.firestore {
     }
 
     // Bank inbox items (alerts waiting for the user to review). Written by the app (pasted alerts)
-    // or by the server (Mono sync, which bypasses these rules).
+    //.
     function validInbox(d) {
       return d.keys().hasOnly(['amount', 'type', 'description', 'category', 'date', 'bank', 'bankRef', 'source', 'status', 'createdAt'])
         && d.amount is number && d.amount > 0 && d.amount <= 1000000000000
@@ -103,13 +103,6 @@ service cloud.firestore {
     match /users/{userId}/settings/projection {
       allow read: if isOwner(userId);
       allow create, update, delete: if isOwner(userId) && hasValidProfile(userId);
-    }
-
-    // Linked bank accounts. Created and removed only by the server (after Mono confirms the
-    // connection). The owner can read their own links.
-    match /users/{userId}/bankLinks/{id} {
-      allow read: if isOwner(userId);
-      allow write: if false;
     }
 
     // Bank inbox. The owner reviews items; the only edit allowed is changing the status.

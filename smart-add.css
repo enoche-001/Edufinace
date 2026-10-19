@@ -49,18 +49,11 @@
     padding: 2px 7px; border-radius: 99px; background: var(--warn-soft); color: var(--warn); }
 
 /* Bank link */
-.bl-copy { font-size: 0.88rem; margin-bottom: 12px; }
 .bl-list { margin: 0 0 12px 18px; font-size: 0.88rem; line-height: 1.7; }
 .bank-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .bank-pick { min-height: 48px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--ink);
     font: inherit; font-weight: 600; font-size: 0.9rem; cursor: pointer; }
 .bank-pick:active { border-color: var(--brand); background: var(--brand-soft); }
-.link-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); }
-.link-row div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.link-row small { color: var(--muted); font-size: 0.78rem; }
 .link-demo { display: flex; flex-direction: column; gap: 8px; padding: 14px 0; }
 .demo-btns { display: flex; gap: 8px; flex-wrap: wrap; }
 .bank-card-status { font-size: 0.86rem; color: var(--muted); margin-bottom: 12px; }
-
-/* Mono Connect widget must sit above sheets and the backdrop */
-iframe[src*="mono.co"], iframe[src*="withmono.com"], iframe[title*="Mono" i], [id*="mono-connect" i] { z-index: 2147483647 !important; }

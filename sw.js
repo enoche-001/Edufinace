@@ -1,6 +1,6 @@
 /* EduFinance service worker: offline app shell + safe runtime caching.
    Bump VERSION whenever you deploy changed files so installed apps update. */
-const VERSION = 'edufinance-v1.2.3';
+const VERSION = 'edufinance-v1.3.1';
 const SHELL = VERSION + '-shell';
 const RUNTIME = VERSION + '-runtime';
 
@@ -9,7 +9,7 @@ const CORE = [
   'style.css', 'dashboard.css', 'site.css', 'pwa.css',
   'app.js', 'auth.js', 'demo-data.js', 'sheets.js', 'currency.js', 'geminiapi.js', 'intelligence.js',
   'insights-ai.js', 'onboarding.js', 'mobile-nav.js', 'debts.js', 'badges.js', 'security-lock.js', 'pwa.js',
-  'alert-parser.js', 'smart-add.js', 'bank-link.js', 'bank-config.js', 'smart-add.css',
+  'alert-parser.js', 'smart-add.js', 'bank-inbox.js', 'smart-add.css',
   'manifest.webmanifest', 'favicon.svg', 'icons/icon-192.png', 'icons/icon-512.png'
 ];
 

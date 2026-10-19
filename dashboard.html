@@ -518,9 +518,8 @@
 
                 <div class="stack" id="profileSideStack">
                     <div class="card" data-auth="user" id="bankLinkCard">
-                        <div class="sec-head"><h2>Bank link</h2><span class="demo-tag" id="bankModeTag" hidden>Test mode</span></div>
-                        <p class="bank-card-status" id="bankLinkStatus">No bank linked.</p>
-                        <button type="button" class="btn btn-ghost btn-full" id="bankLinkBtn"><i class="fa-solid fa-building-columns"></i> Link a bank account</button>
+                        <div class="sec-head"><h2>Bank alerts</h2></div>
+                        <p class="bank-card-status">To add bank transactions, copy the alert from your bank SMS or email, then tap Paste bank alert on the Add screen. You can review and edit it before it is saved.</p>
                     </div>
                     <details class="card fold-card">
                         <summary>Change password</summary>
@@ -816,13 +815,6 @@
     </div>
 </div>
 
-<!-- Link a bank -->
-<div class="sheet" id="bankLinkSheet" role="dialog" aria-label="Link a bank account">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title-row"><h3>Link a bank account</h3><button type="button" class="sheet-close" data-close-sheet aria-label="Close"><i class="fa-solid fa-xmark"></i></button></div>
-    <div class="sheet-body" id="bankLinkBody"></div>
-</div>
-
 <!-- Clipboard: a bank alert was copied -->
 <div class="clip-banner" id="clipBanner" hidden role="status">
     <i class="fa-solid fa-paste"></i><span id="clipBannerText"></span>
@@ -861,8 +853,7 @@
 <script src="debts.js?v=20261010a"></script>
 <script src="badges.js?v=20261010a"></script>
 <script src="security-lock.js?v=20261010d"></script>
-<script src="bank-config.js?v=20261016a"></script>
 <script src="smart-add.js?v=20261016a"></script>
-<script src="bank-link.js?v=20261018c"></script>
+<script src="bank-inbox.js?v=20261019b"></script>
 </body>
 </html>
