@@ -1,4 +1,4 @@
-/* EduFinance - first-visit newsletter prompt (landing page only).
+/* SteadyScale - first-visit newsletter prompt (landing page only).
    Non-blocking card (page stays usable), closable with x / No / Escape, never auto-dismisses.
    Asks once. "Yes" subscribes; "No" is remembered and never asked again.
    Browsers do not let a website read a visitor's email address, so:
@@ -58,9 +58,9 @@
         var input = $('nlpEmail'), msg = $('nlpMsg'), yes = $('nlpYes');
         if (knownEmail) {
             input.value = knownEmail;
-            $('nlpText').textContent = 'Get student finance tips and product updates at ' + knownEmail + '. Unsubscribe any time.';
+            $('nlpText').textContent = 'Get budgeting tips and product updates at ' + knownEmail + '. Unsubscribe any time.';
         } else {
-            $('nlpText').textContent = 'Student finance tips and product updates, occasionally. Enter your email to join, or tap No.';
+            $('nlpText').textContent = 'Money tips and product updates, occasionally. Enter your email to join, or tap No.';
         }
 
         function close(v) { if (v) remember(v); back.classList.remove('on'); setTimeout(function () { back.remove(); }, 250); document.removeEventListener('keydown', onKey); }

@@ -1,5 +1,5 @@
 /* =========================================
-   EduFinance - Smart add
+   SteadyScale - Smart add
    1. "Paste bank alert" button + paste box in the Add transaction form
    2. One-tap banner when a bank alert is on the clipboard (after the user allowed clipboard access once)
    3. Share target: share an SMS / email to the installed app (see sw.js and manifest.webmanifest)

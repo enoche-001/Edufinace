@@ -1,4 +1,4 @@
-/* EduFinance shared motion + PWA polish. Loaded on every page. */
+/* SteadyScale shared motion + PWA polish. Loaded on every page. */
 @keyframes eduPageIn { from { opacity: 0; } to { opacity: 1; } }
 body { animation: eduPageIn .32s ease-out both; }
 html { -webkit-tap-highlight-color: transparent; }
@@ -49,7 +49,7 @@ html.is-standalone input, html.is-standalone textarea, html.is-standalone [conte
 .pwa-sheet .pwa-sheet-x { position: absolute; top: 10px; right: 12px; width: auto; background: none; color: #707eae; font-size: 1.5rem; line-height: 1; padding: 4px 8px; border-radius: 8px; border: 0; }
 .pwa-sheet .pwa-sheet-ok { width: 100%; border: 0; border-radius: 13px; padding: 14px; font: inherit; font-weight: 700; background: #4318ff; color: #fff; }
 
-/* Brand wordmark (Edu + finance) used next to the logo mark everywhere */
+/* Brand wordmark (Steady + Scale) used next to the logo mark everywhere */
 .wm { font-weight: 800; letter-spacing: -.02em; color: #2b3674; }
 .wm b { font-weight: 800; color: #05a67a; }
 html[data-theme="dark"] .wm, body[data-theme="dark"] .wm { color: #e9edff; }

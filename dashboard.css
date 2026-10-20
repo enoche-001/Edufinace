@@ -1,5 +1,5 @@
 /* =========================================================
-   EduFinance dashboard UI
+   SteadyScale dashboard UI
    Self-contained: dashboard.html uses only this file.
    (style.css still serves the landing, login and info pages.)
    ========================================================= */
@@ -802,3 +802,17 @@ body.app:not(.is-guest):not(.is-user) [data-auth] { visibility: hidden; }
 .btn-danger-solid { background: #d9363e; color: #fff; border-color: transparent; }
 .btn-danger-solid:hover { filter: brightness(1.08); }
 .btn:disabled, .btn[disabled] { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+[hidden]{display:none!important}
+.plan-result span+span{display:block}
+.plan-stats{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:10px}
+.plan-stats li{display:flex;justify-content:space-between;gap:12px;font-size:.9rem;padding:10px 14px;border:1px solid var(--line,rgba(0,0,0,.08));border-radius:12px}
+.plan-stats li span{color:var(--muted);font-weight:600}
+.plan-stats li b{font-variant-numeric:tabular-nums;text-align:right;overflow-wrap:anywhere}
+
+.onb-type-list{display:grid;gap:12px;margin-top:8px}
+.onb-type{display:grid;grid-template-columns:40px 1fr;column-gap:12px;align-items:center;text-align:left;background:var(--surface-2);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:16px;cursor:pointer;min-height:72px}
+.onb-type i{grid-row:1 / span 2;font-size:1.3rem;color:var(--brand);text-align:center}
+.onb-type b{font-size:1rem}
+.onb-type span{font-size:.85rem;color:var(--muted);line-height:1.35}
+.onb-type:hover,.onb-type:focus-visible{border-color:var(--brand);background:var(--brand-soft)}

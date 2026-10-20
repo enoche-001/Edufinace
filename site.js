@@ -1,4 +1,4 @@
-/* EduFinance public site - site.js: nav, mobile menu, FAQ, reveal, counters, carousel, TOC */
+/* SteadyScale public site - site.js: nav, mobile menu, FAQ, reveal, counters, carousel, TOC */
 (function () {
   'use strict';
   var d = document, root = d.documentElement;

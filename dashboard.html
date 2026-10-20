@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#f4f5fa">
     <meta name="color-scheme" content="only light">
-    <title>EduFinance</title>
+    <title>SteadyScale</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -21,7 +21,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="EduFinance">
+<meta name="apple-mobile-web-app-title" content="SteadyScale">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="stylesheet" href="pwa.css?v=20261013a">
 <script src="pwa.js?v=20261013a" defer></script>
@@ -33,7 +33,7 @@
     <!-- Sidebar (tablet and desktop) -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <div class="logo"><svg class="logo-mark" viewBox="0 0 120 126" aria-hidden="true" focusable="false"><use href="#logo"/></svg><span class="wm">Edu<b>finance</b></span></div>
+            <div class="logo"><svg class="logo-mark" viewBox="0 0 120 126" aria-hidden="true" focusable="false"><use href="#logo"/></svg><span class="wm">Steady<b>Scale</b></span></div>
         </div>
         <nav class="sidebar-menu">
             <a href="#" class="menu-item active" data-tab="dashboard"><i class="fa-solid fa-house"></i><span>Home</span></a>
@@ -41,7 +41,7 @@
             <a href="#" class="menu-item" data-tab="budgets"><i class="fa-solid fa-wallet"></i><span>Budgets</span></a>
             <a href="#" class="menu-item" data-tab="savings"><i class="fa-solid fa-piggy-bank"></i><span>Savings</span></a>
             <a href="#" class="menu-item" data-tab="debts"><i class="fa-solid fa-handshake"></i><span>Owe / Owed</span></a>
-            <a href="#" class="menu-item" data-tab="projections"><i class="fa-solid fa-calendar-check"></i><span>Semester plan</span></a>
+            <a href="#" class="menu-item" data-tab="projections"><i class="fa-solid fa-calendar-check"></i><span data-plan-label>Monthly plan</span></a>
             <a href="#" class="menu-item" data-tab="intelligence"><i class="fa-solid fa-brain"></i><span>Insights</span></a>
             <a href="#" class="menu-item" data-tab="profile"><i class="fa-solid fa-user-gear"></i><span>Profile</span></a>
         </nav>
@@ -54,7 +54,7 @@
     <main class="main-content">
         <!-- App bar: one avatar, placed left on phones and right on desktop -->
         <header class="app-bar">
-            <button type="button" class="avatar avatar-btn" id="userAvatarDisplay" data-go="profile" aria-label="Open profile"><i class="fa-solid fa-user-graduate"></i></button>
+            <button type="button" class="avatar avatar-btn" id="userAvatarDisplay" data-go="profile" aria-label="Open profile"><i class="fa-solid fa-user"></i></button>
             <div class="app-bar-title">
                 <p class="subtitle" id="headerSubtitle"></p>
                 <h1 id="greetingHeading">Welcome</h1>
@@ -84,8 +84,8 @@
                 <div class="overview-side">
                     <div class="card forecast">
                         <span class="round-ico"><i class="fa-solid fa-hourglass-half"></i></span>
-                        <span class="forecast-text">End of term</span>
-                        <span class="forecast-value" id="termForecast">0.00</span>
+                        <span class="forecast-text" data-forecast-label>End of cycle</span>
+                        <span class="forecast-value" id="cycleForecast">0.00</span>
                     </div>
                     <div id="streakSlot"></div>
                 </div>
@@ -356,12 +356,51 @@
             </div>
         </section>
 
-        <!-- ================= SEMESTER PLAN ================= -->
+        <!-- ================= MONTHLY PLAN ================= -->
         <section id="projections-tab" class="tab-content">
+<div id="planGeneral">
+            <div class="split plan-grid">
+                <div class="card">
+                    <div class="sec-head"><h2>Monthly plan</h2></div>
+                    <form id="projectionForm" class="form">
+                        <div class="form-group">
+                            <label for="planCycle">Pay cycle</label>
+                            <select id="planCycle" class="form-control">
+                                <option value="monthly">Monthly</option>
+                                <option value="biweekly">Every two weeks (bi-weekly)</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="planStartDayGroup">
+                            <label for="planStartDay">Cycle starts on day</label>
+                            <input type="number" id="planStartDay" class="form-control" value="1" min="1" max="28" inputmode="numeric">
+                            <small class="text-muted">Use 1 for the calendar month, or the day your pay usually lands (1 to 28).</small>
+                        </div>
+                        <div class="form-group" id="planAnchorGroup" hidden>
+                            <label for="planAnchor">Date of your last payday</label>
+                            <input type="date" id="planAnchor" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="planIncome">Expected income each cycle</label>
+                            <input type="number" id="planIncome" class="form-control" placeholder="3000" min="0" step="any" inputmode="decimal" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="savingsSafety">Safety buffer</label>
+                            <input type="number" id="savingsSafety" class="form-control" value="300" min="0" step="any" inputmode="decimal">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">Calculate</button>
+                    </form>
+                </div>
+                <div class="card plan-result-card">
+                    <div class="sec-head"><h2>Safe spending</h2></div>
+                    <div id="projectionResults"></div>
+                </div>
+            </div>
+        </div>
+<div id="planStudent" hidden>
             <div class="split plan-grid">
                 <div class="card">
                     <div class="sec-head"><h2>Semester plan</h2></div>
-                    <form id="projectionForm" class="form">
+                    <form id="semesterForm" class="form">
                         <div class="form-group">
                             <label for="semesterWeeks">Weeks in the semester</label>
                             <input type="number" id="semesterWeeks" class="form-control" value="16" min="1" max="52" inputmode="numeric" required>
@@ -371,18 +410,19 @@
                             <input type="number" id="bulkIncome" class="form-control" placeholder="5000" min="0" step="any" inputmode="decimal" required>
                         </div>
                         <div class="form-group">
-                            <label for="savingsSafety">Emergency buffer</label>
-                            <input type="number" id="savingsSafety" class="form-control" value="500" min="0" step="any" inputmode="decimal">
+                            <label for="studentSafety">Emergency buffer</label>
+                            <input type="number" id="studentSafety" class="form-control" value="500" min="0" step="any" inputmode="decimal">
                         </div>
                         <button type="submit" class="btn btn-primary btn-full">Calculate</button>
                     </form>
                 </div>
                 <div class="card plan-result-card">
                     <div class="sec-head"><h2>Weekly allowance</h2></div>
-                    <div id="projectionResults"></div>
+                    <div id="semesterResults"></div>
                 </div>
             </div>
-        </section>
+        </div>
+</section>
 
         <!-- ================= INSIGHTS ================= -->
         <section id="intelligence-tab" class="tab-content">
@@ -479,10 +519,10 @@
             <div class="split">
                 <div class="card">
                     <div class="profile-head">
-                        <span class="avatar avatar-lg" id="profileAvatarPreview"><i class="fa-solid fa-user-graduate"></i></span>
+                        <span class="avatar avatar-lg" id="profileAvatarPreview"><i class="fa-solid fa-user"></i></span>
                         <div>
                             <b id="profileNameDisplay"></b>
-                            <small>ID <span id="profileAccountIdDisplay">EDU-000000</span></small>
+                            <small>ID <span id="profileAccountIdDisplay">SS-000000</span></small>
                         </div>
                     </div>
                     <form id="profileForm" class="form">
@@ -511,6 +551,13 @@
                         <div class="form-group">
                             <label for="profileCurrency">Currency</label>
                             <select id="profileCurrency" class="form-control"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="profileAccountType">I use SteadyScale as</label>
+                            <select id="profileAccountType" class="form-control">
+                                <option value="general">Earner or household</option>
+                                <option value="student">Student</option>
+                            </select>
                         </div>
                         <button type="submit" class="btn btn-primary btn-full">Save changes</button>
                     </form>
@@ -542,7 +589,7 @@
                     </div>
                     <div class="card" data-auth="user">
                         <div class="sec-head"><h2>Account</h2></div>
-                        <p class="text-muted" style="font-size:0.84rem;margin-bottom:12px;">Sign out of EduFinance on this device. You'll be asked to confirm twice.</p>
+                        <p class="text-muted" style="font-size:0.84rem;margin-bottom:12px;">Sign out of SteadyScale on this device. You'll be asked to confirm twice.</p>
                         <button type="button" class="btn btn-ghost btn-full" data-pwa-install hidden><i class="fa-solid fa-mobile-screen-button"></i> Install app</button>
                         <button type="button" class="btn btn-ghost btn-full" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Log out</button>
                     </div>
@@ -624,7 +671,124 @@
 </div>
 
 <!-- First-time Setup Wizard (shown once to new users) -->
-    <div class="onb-backdrop" id="onboardingOverlay" role="dialog" aria-modal="true" aria-labelledby="onbTitle" hidden>
+    <div class="onb-backdrop" id="onboardingOverlay" role="dialog" aria-modal="true" aria-labelledby="onbTitle" hidden></div>
+    <template id="onbTemplateGeneral">
+        <div class="onb-card">
+            <div class="onb-top">
+                <span class="onb-step-label" id="onbStepLabel">Step 1 of 6</span>
+                <div class="onb-progress"><div class="onb-progress-bar" id="onbProgressBar"></div></div>
+            </div>
+
+            <div class="onb-body">
+                <!-- Step 1: starting balance (required) -->
+                <section class="onb-step active" data-step="1">
+                    <h2 id="onbTitle">Welcome<span id="onbWelcomeName"></span>! Let's set up your money</h2>
+                    <p class="onb-sub">This takes about a minute and makes every chart and tip in the app work for you.</p>
+                    <label class="onb-label" for="onbBalance">How much money do you have right now?</label>
+                    <div class="onb-money">
+                        <span class="onb-money-sym" data-cur></span>
+                        <input type="number" id="onbBalance" class="form-control" inputmode="decimal" min="0" step="any" placeholder="0.00">
+                    </div>
+                    <p class="onb-hint">Add up cash, bank and mobile money. Enter 0 if you have nothing at the moment.</p>
+                </section>
+
+                <!-- Step 2: income sources (required) -->
+                <section class="onb-step" data-step="2">
+                    <h2>How does money reach you?</h2>
+                    <p class="onb-sub">Pick everything that applies. You can mix them.</p>
+                    <div class="onb-chips" id="onbSourceChips">
+                        <button type="button" class="onb-chip" data-source="salary" aria-pressed="false">Salary or wages</button>
+                        <button type="button" class="onb-chip" data-source="freelance" aria-pressed="false">Freelance or side hustle</button>
+                        <button type="button" class="onb-chip" data-source="household" aria-pressed="false">Household contributions</button>
+                        <button type="button" class="onb-chip" data-source="other" aria-pressed="false">Bonuses and irregular</button>
+                    </div>
+
+                    <div class="onb-panel" id="onbPanel_salary" hidden>
+                        <label class="onb-label" for="onbSalaryAmt">Salary or wages (take-home pay)</label>
+                        <div class="onb-row">
+                            <div class="onb-money"><span class="onb-money-sym" data-cur></span><input type="number" id="onbSalaryAmt" class="form-control" inputmode="decimal" min="0" step="any" placeholder="Amount"></div>
+                            <select id="onbSalaryFreq" class="form-control onb-freq"><option value="monthly" selected>per month</option><option value="biweekly">every 2 weeks</option><option value="weekly">per week</option></select>
+                        </div>
+                    </div>
+                    <div class="onb-panel" id="onbPanel_freelance" hidden>
+                        <label class="onb-label" for="onbFreelanceAmt">Freelance, gig or side hustle income. Enter a typical or lower-than-usual amount.</label>
+                        <div class="onb-row">
+                            <div class="onb-money"><span class="onb-money-sym" data-cur></span><input type="number" id="onbFreelanceAmt" class="form-control" inputmode="decimal" min="0" step="any" placeholder="Typical amount"></div>
+                            <select id="onbFreelanceFreq" class="form-control onb-freq"><option value="monthly" selected>per month</option><option value="weekly">per week</option></select>
+                        </div>
+                    </div>
+                    <div class="onb-panel" id="onbPanel_household" hidden>
+                        <label class="onb-label" for="onbHouseholdAmt">Money a partner or family member contributes to shared bills each month</label>
+                        <div class="onb-money"><span class="onb-money-sym" data-cur></span><input type="number" id="onbHouseholdAmt" class="form-control" inputmode="decimal" min="0" step="any" placeholder="Amount per month"></div>
+                    </div>
+                    <div class="onb-panel" id="onbPanel_other" hidden>
+                        <label class="onb-label" for="onbOtherAmt">Bonuses, rental income, interest and other irregular money. About how much in a normal month? (optional)</label>
+                        <div class="onb-money"><span class="onb-money-sym" data-cur></span><input type="number" id="onbOtherAmt" class="form-control" inputmode="decimal" min="0" step="any" placeholder="Rough amount per month"></div>
+                        <p class="onb-hint">Irregular money is not counted in your monthly plan. It is treated as a bonus when you log it.</p>
+                    </div>
+                </section>
+
+                <!-- Step 3: pay cycle (skippable) -->
+                <section class="onb-step" data-step="3">
+                    <h2>How do you plan your months?</h2>
+                    <p class="onb-sub">Your plan follows this cycle to turn income into a weekly spending amount.</p>
+                    <div class="onb-chips" id="onbCycleChips">
+                        <button type="button" class="onb-chip selected" data-cycle="monthly" aria-pressed="true">Monthly</button>
+                        <button type="button" class="onb-chip" data-cycle="biweekly" aria-pressed="false">Every 2 weeks</button>
+                    </div>
+                    <div id="onbCycleMonthly">
+                        <label class="onb-label" for="onbStartDay">Which day does your month start? Use 1 for the calendar month.</label>
+                        <input type="number" id="onbStartDay" class="form-control" inputmode="numeric" min="1" max="28" step="1" value="1">
+                    </div>
+                    <div id="onbCycleBiweekly" hidden>
+                        <label class="onb-label" for="onbAnchor">Date of your last payday</label>
+                        <input type="date" id="onbAnchor" class="form-control">
+                    </div>
+                </section>
+
+                <!-- Step 4: biggest expenses -> budgets (skippable) -->
+                <section class="onb-step" data-step="4">
+                    <h2>What do you spend the most on?</h2>
+                    <p class="onb-sub">Tap your main expenses. We suggest a monthly limit from your income, and you can change any number.</p>
+                    <div class="onb-chips" id="onbBudgetChips"></div>
+                    <div id="onbBudgetRows"></div>
+                </section>
+
+                <!-- Step 5: savings goal (skippable) -->
+                <section class="onb-step" data-step="5">
+                    <h2>Saving for something?</h2>
+                    <p class="onb-sub">A laptop, a trip, an emergency fund. Leave it empty if not now.</p>
+                    <label class="onb-label" for="onbGoalName">Goal name</label>
+                    <input type="text" id="onbGoalName" class="form-control" maxlength="60" placeholder="e.g. New laptop">
+                    <label class="onb-label" for="onbGoalTarget">Target amount</label>
+                    <div class="onb-money"><span class="onb-money-sym" data-cur></span><input type="number" id="onbGoalTarget" class="form-control" inputmode="decimal" min="0" step="any" placeholder="0.00"></div>
+                    <label class="onb-label" for="onbGoalSaved">Already saved (optional)</label>
+                    <div class="onb-money"><span class="onb-money-sym" data-cur></span><input type="number" id="onbGoalSaved" class="form-control" inputmode="decimal" min="0" step="any" placeholder="0.00"></div>
+                    <label class="onb-label" for="onbGoalDate">Target date (optional)</label>
+                    <input type="date" id="onbGoalDate" class="form-control">
+                </section>
+
+                <!-- Step 6: safety buffer (skippable) -->
+                <section class="onb-step" data-step="6">
+                    <h2>Set your safety buffer</h2>
+                    <p class="onb-sub">The minimum you never want to drop below, for emergencies. We suggest about 10% of your monthly money.</p>
+                    <label class="onb-label" for="onbSafety">Safety buffer</label>
+                    <div class="onb-money"><span class="onb-money-sym" data-cur></span><input type="number" id="onbSafety" class="form-control" inputmode="decimal" min="0" step="any" placeholder="0.00"></div>
+                    <div class="onb-preview" id="onbPreview" aria-live="polite"></div>
+                </section>
+            </div>
+
+            <p class="onb-error" id="onbError" role="alert"></p>
+
+            <div class="onb-footer">
+                <button type="button" class="btn btn-secondary-outline" id="onbBack">Back</button>
+                <span class="onb-spacer"></span>
+                <button type="button" class="btn btn-secondary-outline" id="onbSkip">Skip</button>
+                <button type="button" class="btn btn-primary" id="onbNext">Continue</button>
+            </div>
+        </div>
+    </template>
+    <template id="onbTemplateStudent">
         <div class="onb-card">
             <div class="onb-top">
                 <span class="onb-step-label" id="onbStepLabel">Step 1 of 6</span>
@@ -735,7 +899,20 @@
                 <button type="button" class="btn btn-primary" id="onbNext">Continue</button>
             </div>
         </div>
+    </template>
+    <div class="onb-backdrop" id="onbTypeOverlay" role="dialog" aria-modal="true" aria-labelledby="onbTypeTitle" hidden>
+        <div class="onb-card"><div class="onb-body">
+            <section class="onb-step active">
+                <h2 id="onbTypeTitle">Welcome<span id="onbTypeName"></span>! How will you use SteadyScale?</h2>
+                <p class="onb-sub">We tailor your setup, categories and planner to you. You can change this later in your profile.</p>
+                <div class="onb-type-list">
+                    <button type="button" class="onb-type" data-type="general"><i class="fa-solid fa-briefcase"></i><b>Earner or household</b><span>Salary, freelance income, side hustles and shared bills. Plans by month or pay cycle.</span></button>
+                    <button type="button" class="onb-type" data-type="student"><i class="fa-solid fa-graduation-cap"></i><b>Student</b><span>Allowance, loans or scholarships. Plans by semester.</span></button>
+                </div>
+            </section>
+        </div></div>
     </div>
+    
 
     
 <!-- Toast -->
@@ -771,7 +948,7 @@
             <button type="button" class="more-item" data-go="budgets"><i class="fa-solid fa-wallet"></i><span>Budgets</span></button>
             <button type="button" class="more-item" data-go="savings"><i class="fa-solid fa-piggy-bank"></i><span>Savings</span></button>
             <button type="button" class="more-item" data-go="debts"><i class="fa-solid fa-handshake"></i><span>Owe / Owed</span></button>
-            <button type="button" class="more-item" data-go="projections"><i class="fa-solid fa-calendar-check"></i><span>Semester plan</span></button>
+            <button type="button" class="more-item" data-go="projections"><i class="fa-solid fa-calendar-check"></i><span data-plan-label>Monthly plan</span></button>
             <button type="button" class="more-item" data-go="profile"><i class="fa-solid fa-user-gear"></i><span>Profile</span></button>
             <button type="button" class="more-item" id="moreTheme"><i class="fa-solid fa-moon"></i><span>Theme</span></button>
             <a class="more-item" data-auth="guest" href="login.html#signup" style="text-decoration:none;color:inherit;"><i class="fa-solid fa-user-plus"></i><span>Sign up</span></a>
@@ -847,6 +1024,7 @@
 <script src="intelligence.js?v=20261010a"></script>
 <script src="insights-ai.js?v=20261014a"></script>
 <script src="onboarding.js?v=20261010a"></script>
+<script src="onboarding-student.js?v=20261020a"></script>
 <script src="alert-parser.js?v=20261016a"></script>
 <script src="app.js?v=20261016a"></script>
 <script src="mobile-nav.js?v=20261010a"></script>

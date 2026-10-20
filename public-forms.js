@@ -1,5 +1,5 @@
 /* =========================================
-   EduFinance - Public forms -> Firestore
+   SteadyScale - Public forms -> Firestore
    Contact Us  -> support_tickets
    Newsletter  -> newsletter_subscribers
    (Read by admin.html. Rules are in FIREBASE_RULES.md.)

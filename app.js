@@ -1,5 +1,5 @@
 /* =========================================
-   EduFinance - Dashboard App Script (dashboard.html)
+   SteadyScale - Dashboard App Script (dashboard.html)
    ========================================= */
 
 const firebaseConfig = {
@@ -39,41 +39,104 @@ document.addEventListener('DOMContentLoaded', () => {
         transactions: [],
         budgets: {},
         savingsGoals: [],
-        projection: { weeks: 16, bulk: 4000, safety: 300 },
+        projection: { cycle: 'monthly', startDay: 1, anchor: '', income: 0, safety: 300 },
         profile: {
-            username: 'Student Wallet',
+            username: 'My Wallet',
             firstName: '',
             lastName: '',
             dob: '',
-            accountId: 'EDU-' + Math.floor(100000 + Math.random() * 900000),
+            accountId: 'SS-' + Math.floor(100000 + Math.random() * 900000),
             currency: EduCurrency.detect(),
-            avatar: 'fa-user-graduate'
+            avatar: 'fa-user'
         }
     };
 
-    const categories = {
-        expense: [
-            'Tuition & Books',
-            'Rent & Utilities',
-            'Groceries & Food',
-            'Transport & Transit',
-            'Social & Entertainment',
-            'Subscriptions & Tech',
-            'Health & Personal',
-            'Miscellaneous'
-        ],
-        income: [
-            'Student Loan / Grant',
-            'Part-time Job / Salary',
-            'Allowance / Parents',
-            'Scholarship / Bursary',
-            'Freelance / Side Gig',
-            'Other Income'
-        ]
+    const CATS = {
+        general: {
+            expense: ['Professional Development', 'Rent & Utilities', 'Groceries', 'Dining', 'Transport',
+                'Household & Family', 'Social & Entertainment', 'Subscriptions & Tech', 'Health & Personal', 'Miscellaneous'],
+            income: ['Salary', 'Freelance / Side Hustle', 'Business Income', 'Household Contributions',
+                'Investments & Interest', 'Other Income']
+        },
+        student: {
+            expense: ['Tuition & Books', 'Rent & Utilities', 'Groceries & Food', 'Transport & Transit',
+                'Social & Entertainment', 'Subscriptions & Tech', 'Health & Personal', 'Miscellaneous'],
+            income: ['Student Loan / Grant', 'Part-time Job / Salary', 'Allowance / Parents',
+                'Scholarship / Bursary', 'Freelance / Side Gig', 'Other Income']
+        }
     };
+    // Shared object: its contents are swapped when the account type is known
+    const categories = { expense: CATS.general.expense.slice(), income: CATS.general.income.slice() };
+
+    // Student category names -> general names (used for non-student accounts)
+    const LEGACY_CATEGORY_MAP = {
+        'Tuition & Books': 'Professional Development',
+        'Groceries & Food': 'Groceries',
+        'Transport & Transit': 'Transport',
+        'Student Loan / Grant': 'Other Income',
+        'Part-time Job / Salary': 'Salary',
+        'Allowance / Parents': 'Household Contributions',
+        'Scholarship / Bursary': 'Other Income',
+        'Freelance / Side Gig': 'Freelance / Side Hustle'
+    };
+    // General names -> student names (used for student accounts, and for alert parsing)
+    const GENERAL_TO_STUDENT = {
+        'Professional Development': 'Tuition & Books',
+        'Groceries': 'Groceries & Food',
+        'Dining': 'Groceries & Food',
+        'Transport': 'Transport & Transit',
+        'Household & Family': 'Miscellaneous',
+        'Salary': 'Part-time Job / Salary',
+        'Freelance / Side Hustle': 'Freelance / Side Gig',
+        'Business Income': 'Other Income',
+        'Household Contributions': 'Allowance / Parents',
+        'Investments & Interest': 'Other Income'
+    };
+    function normCategory(c) {
+        if (acctType() === 'student') return GENERAL_TO_STUDENT[c] || c;
+        return LEGACY_CATEGORY_MAP[c] || c;
+    }
+
+    /* ---------- Account type: 'student' or 'general' (chosen right after sign-up) ---------- */
+    let appliedType = null;
+    function acctType() {
+        const t = state.profile && state.profile.accountType;
+        if (t === 'student' || t === 'general') return t;
+        if (!currentUser) return 'general';                     // guest / demo
+        if (!dataLoaded.profile) return null;
+        // Accounts created before account types existed are student accounts
+        if (state.profile.onboarded || state.transactions.length) return 'student';
+        return null;                                            // brand new: ask first
+    }
+    function remapCategories() {
+        state.transactions.forEach(t => { t.category = normCategory(t._rawCat != null ? t._rawCat : t.category); });
+        if (state._rawBudgets) {
+            const merged = {};
+            Object.keys(state._rawBudgets).forEach(k => { const nk = normCategory(k); merged[nk] = (merged[nk] || 0) + state._rawBudgets[k]; });
+            state.budgets = merged;
+        }
+    }
+    function applyAccountType() {
+        const t = acctType() || 'general';
+        if (appliedType === t) return;
+        appliedType = t;
+        categories.expense = CATS[t].expense.slice();
+        categories.income = CATS[t].income.slice();
+        const stu = t === 'student';
+        const pg = document.getElementById('planGeneral'), ps = document.getElementById('planStudent');
+        if (pg) pg.hidden = stu;
+        if (ps) ps.hidden = !stu;
+        document.querySelectorAll('[data-plan-label]').forEach(el => { el.textContent = stu ? 'Semester plan' : 'Monthly plan'; });
+        document.querySelectorAll('[data-forecast-label]').forEach(el => { el.textContent = stu ? 'End of term' : 'End of cycle'; });
+        const sel = document.getElementById('profileAccountType');
+        if (sel && document.activeElement !== sel) sel.value = t;
+        remapCategories();
+        if (typeof transTypeSelect !== 'undefined' && transTypeSelect) populateCategories();
+    }
+
 
     const avatarCollection = [
-        'fa-user-graduate', 'fa-user-tie', 'fa-user-astronaut', 'fa-user-ninja',
+        'fa-user', 'fa-user-graduate', 'fa-user-tie', 'fa-user-astronaut', 'fa-user-ninja',
         'fa-user-shield', 'fa-user-pen', 'fa-robot', 'fa-cat',
         'fa-dog', 'fa-ghost', 'fa-dragon', 'fa-bolt'
     ];
@@ -99,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const totalBalanceEl = document.getElementById('totalBalance');
     const monthlyIncomeEl = document.getElementById('monthlyIncome');
     const monthlyExpensesEl = document.getElementById('monthlyExpenses');
-    const termForecastEl = document.getElementById('termForecast');
+    const cycleForecastEl = document.getElementById('cycleForecast');
     const balanceStatusEl = document.getElementById('balanceStatus');
 
     const dashboardTransactionsTable = document.getElementById('dashboardTransactionsTable');
@@ -231,7 +294,10 @@ document.addEventListener('DOMContentLoaded', () => {
         unsubTransactions = transRef.onSnapshot(snapshot => {
             state.transactions = [];
             snapshot.forEach(docSnap => {
-                state.transactions.push({ id: docSnap.id, ...docSnap.data() });
+                const tx = { id: docSnap.id, ...docSnap.data() };
+                tx._rawCat = tx.category;
+                tx.category = normCategory(tx.category);
+                state.transactions.push(tx);
             });
             state.transactions.sort(cmpDateThenRecorded);
             dataLoaded.transactions = true;
@@ -243,7 +309,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const budgetDocRef = db.collection('users').doc(uid).collection('settings').doc('budgets');
         unsubBudgets = budgetDocRef.onSnapshot(docSnap => {
             if (docSnap.exists) {
-                state.budgets = docSnap.data().categories || {};
+                state._rawBudgets = docSnap.data().categories || {};
+                const merged = {};
+                Object.keys(state._rawBudgets).forEach(k => { const nk = normCategory(k); merged[nk] = (merged[nk] || 0) + state._rawBudgets[k]; });
+                state.budgets = merged;
             }
             dataLoaded.budgets = true;
             renderAll();
@@ -495,14 +564,45 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        if (projectionForm) {
-            projectionForm.addEventListener('submit', async (e) => {
+        const semesterForm = document.getElementById('semesterForm');
+        if (semesterForm) {
+            semesterForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 state.projection = {
                     weeks: parseInt(document.getElementById('semesterWeeks').value),
                     bulk: parseFloat(document.getElementById('bulkIncome').value),
+                    safety: parseFloat(document.getElementById('studentSafety').value) || 0
+                };
+                if (currentUser) {
+                    await db.collection('users').doc(currentUser.uid).collection('settings').doc('projection').set(state.projection);
+                }
+                renderProjections();
+                showToast(currentUser ? 'Plan saved' : 'Plan updated', 'success');
+            });
+        }
+
+        const planCycleSel = document.getElementById('planCycle');
+        if (planCycleSel) planCycleSel.addEventListener('change', syncCycleFields);
+
+        if (projectionForm) {
+            projectionForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                state.projection = {
+                    cycle: document.getElementById('planCycle').value,
+                    startDay: parseInt(document.getElementById('planStartDay').value, 10),
+                    anchor: document.getElementById('planAnchor').value,
+                    income: parseFloat(document.getElementById('planIncome').value),
                     safety: parseFloat(document.getElementById('savingsSafety').value) || 0
                 };
+                if (state.projection.cycle === 'monthly' && !(state.projection.startDay >= 1 && state.projection.startDay <= 28)) {
+                    showToast('Enter a start day between 1 and 28', 'error');
+                    return;
+                }
+                if (state.projection.cycle === 'biweekly' && !state.projection.anchor) {
+                    showToast('Pick the date of your last payday', 'error');
+                    return;
+                }
+                state.projection = normalizeProjection(state.projection);
                 if (currentUser) {
                     await db.collection('users').doc(currentUser.uid).collection('settings').doc('projection').set(state.projection);
                 }
@@ -518,6 +618,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 state.profile.username = document.getElementById('profileUsername').value.trim();
                 state.profile.firstName = document.getElementById('profileFirstName').value.trim();
                 state.profile.lastName = document.getElementById('profileLastName').value.trim();
+                const typeSel = document.getElementById('profileAccountType');
+                if (typeSel && (typeSel.value === 'student' || typeSel.value === 'general')) state.profile.accountType = typeSel.value;
                 const newDob = document.getElementById('profileDob').value;
                 const newAge = ageFromDob(newDob);
                 if (newAge === null) {
@@ -525,7 +627,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 if (newAge < 13) {
-                    showToast('You must be at least 13 years old to use EduFinance.', 'error');
+                    showToast('You must be at least 13 years old to use SteadyScale.', 'error');
                     return;
                 }
                 state.profile.dob = newDob;
@@ -663,7 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (logoutBtn) {
             logoutBtn.addEventListener('click', () => {
-                showConfirmDialog('Log out?', 'You will be signed out of EduFinance on this device.', () => {
+                showConfirmDialog('Log out?', 'You will be signed out of SteadyScale on this device.', () => {
                     // Second, separate confirmation
                     showConfirmDialog('Really log out?', 'Last check: tap "Yes, log out" to end your session now.', async () => {
                         try { if (window.EduLock) window.EduLock.forget(); } catch (e) { /* ignore */ }
@@ -734,7 +836,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const TAB_TITLES = {
         dashboard: '', transactions: 'Transactions', budgets: 'Budgets', savings: 'Savings goals',
-        debts: 'Owe / Owed', projections: 'Semester plan', intelligence: 'Insights', profile: 'Profile'
+        debts: 'Owe / Owed', projections: 'Monthly plan', intelligence: 'Insights', profile: 'Profile'
     };
     let activeTab = 'dashboard';
 
@@ -746,10 +848,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderHeaderTitle() {
         if (!greetingHeading || !headerSubtitle) return;
         if (activeTab === 'dashboard') {
-            greetingHeading.textContent = state.profile.firstName || state.profile.username || 'Student';
+            greetingHeading.textContent = state.profile.firstName || state.profile.username || 'there';
             headerSubtitle.textContent = greetingWord();
         } else {
-            greetingHeading.textContent = TAB_TITLES[activeTab] || '';
+            greetingHeading.textContent = (activeTab === 'projections' && appliedType === 'student') ? 'Semester plan' : (TAB_TITLES[activeTab] || '');
             headerSubtitle.textContent = '';
         }
     }
@@ -772,7 +874,8 @@ document.addEventListener('DOMContentLoaded', () => {
         transactions: () => state.transactions,
         categories: categories,
         money: (n) => EduCurrency.format(n, state.profile.currency),
-        toast: showToast
+        toast: showToast,
+        normCategory: normCategory
     };
 
     // Refresh keeps you on the same screen and scroll position (data reloads, the view does not reset).
@@ -795,6 +898,7 @@ document.addEventListener('DOMContentLoaded', () => {
     })();
 
     function renderAll() {
+        applyAccountType();
         renderHeaderProfile();
         renderDashboardStats();
         renderDashboardTransactions();
@@ -822,12 +926,44 @@ document.addEventListener('DOMContentLoaded', () => {
         // Existing users who already have data are not interrupted
         if (state.transactions.length || Object.keys(state.budgets).length || state.savingsGoals.length) return;
 
+        const type = acctType();
+        if (!type) { showTypePicker(); return; }
+
         onboardingStarted = true;
-        window.EduOnboarding.start({
+        const overlay = document.getElementById('onboardingOverlay');
+        const tpl = document.getElementById(type === 'student' ? 'onbTemplateStudent' : 'onbTemplateGeneral');
+        if (!overlay || !tpl) return;
+        overlay.innerHTML = '';
+        overlay.appendChild(tpl.content.cloneNode(true));
+        const wizard = type === 'student' ? window.EduOnboardingStudent : window.EduOnboarding;
+        wizard.start({
             currency: state.profile.currency,
             name: state.profile.firstName || state.profile.username || '',
             expenseCategories: categories.expense,
             finish: applyOnboarding
+        });
+    }
+
+    let typePickerOpen = false;
+    function showTypePicker() {
+        const box = document.getElementById('onbTypeOverlay');
+        if (!box || typePickerOpen) return;
+        typePickerOpen = true;
+        const nm = document.getElementById('onbTypeName');
+        if (nm) nm.textContent = state.profile.firstName ? ', ' + state.profile.firstName : '';
+        box.hidden = false;
+        box.querySelectorAll('.onb-type').forEach(btn => {
+            btn.onclick = async () => {
+                const t = btn.dataset.type;
+                box.querySelectorAll('.onb-type').forEach(b => { b.disabled = true; });
+                state.profile.accountType = t;
+                try {
+                    await db.collection('users').doc(currentUser.uid).collection('settings').doc('profile').set({ accountType: t }, { merge: true });
+                } catch (err) { console.error(err); }
+                box.hidden = true;
+                typePickerOpen = false;
+                renderAll();
+            };
         });
     }
 
@@ -856,6 +992,7 @@ document.addEventListener('DOMContentLoaded', () => {
         batch.set(userRef.collection('settings').doc('projection'), r.projection);
         batch.set(userRef.collection('settings').doc('profile'), {
             onboarded: true,
+            accountType: acctType() || 'general',
             onboardedAt: localDateString(),
             incomeSources: r.incomeSources,
             monthlyIncomeEstimate: r.monthlyIncomeEstimate
@@ -867,8 +1004,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderHeaderProfile() {
         const nameEl = document.getElementById('appBarUsername');
-        if (nameEl) nameEl.textContent = state.profile.username || 'Student';
-        const icon = state.profile.avatar || 'fa-user-graduate';
+        if (nameEl) nameEl.textContent = state.profile.username || 'there';
+        const icon = state.profile.avatar || 'fa-user';
         // One avatar only: its icon is the single child of the button
         if (userAvatarEl) userAvatarEl.innerHTML = avatarIcon(icon);
         const prev = document.getElementById('profileAvatarPreview');
@@ -889,8 +1026,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (pFirst && document.activeElement !== pFirst) pFirst.value = state.profile.firstName || '';
         if (pLast && document.activeElement !== pLast) pLast.value = state.profile.lastName || '';
         if (pDob && document.activeElement !== pDob) pDob.value = state.profile.dob || '';
-        if (pAccId) pAccId.textContent = state.profile.accountId || 'EDU-XXXXXX';
-        if (pName) pName.textContent = [state.profile.firstName, state.profile.lastName].filter(Boolean).join(' ') || state.profile.username || 'Student';
+        if (pAccId) pAccId.textContent = state.profile.accountId || 'SS-XXXXXX';
+        if (pName) pName.textContent = [state.profile.firstName, state.profile.lastName].filter(Boolean).join(' ') || state.profile.username || 'there';
         if (pCur) {
             const code = EduCurrency.toCode(state.profile.currency);
             if (!pCur.options.length || pCur.value !== code) EduCurrency.populateSelect(pCur, code);
@@ -925,12 +1062,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (monthlyIncomeEl) monthlyIncomeEl.textContent = formatCurrency(month.inc);
         if (monthlyExpensesEl) monthlyExpensesEl.textContent = formatCurrency(month.exp);
 
-        const remainingWeeks = state.projection.weeks || 16;
-        const avgWeeklyExpense = month.exp > 0 ? (month.exp / 4) : 150;
-        const forecast = balance - (avgWeeklyExpense * (remainingWeeks / 4));
-        if (termForecastEl) {
-            termForecastEl.textContent = formatCurrency(forecast);
-            termForecastEl.className = 'forecast-value num ' + (forecast >= 0 ? 'text-pos' : 'text-neg');
+        if (acctType() === 'student') {
+            const remainingWeeks = state.projection.weeks || 16;
+            const avgWeeklyExpense = month.exp > 0 ? (month.exp / 4) : 150;
+            const fc = balance - (avgWeeklyExpense * (remainingWeeks / 4));
+            if (cycleForecastEl) {
+                cycleForecastEl.textContent = formatCurrency(fc);
+                cycleForecastEl.className = 'forecast-value num ' + (fc >= 0 ? 'text-pos' : 'text-neg');
+            }
+        } else {
+        const pj = normalizeProjection(state.projection);
+        const cyc = getCycleInfo(pj, localDateString());
+        const cycSpent = cycleTotals(cyc).exp;
+        let dailyPace = cycSpent / cyc.elapsed;
+        if (!(cycSpent > 0)) dailyPace = pj.income > 0 ? Math.max(0, pj.income - pj.safety) / cyc.total : 0;
+        // Projected balance on the last day of the current pay cycle, at the current spending pace
+        const forecast = balance - dailyPace * (cyc.left - 1);
+        if (cycleForecastEl) {
+            cycleForecastEl.textContent = formatCurrency(forecast);
+            cycleForecastEl.className = 'forecast-value num ' + (forecast >= 0 ? 'text-pos' : 'text-neg');
+        }
         }
 
         if (balanceStatusEl) {
@@ -1185,8 +1336,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const accountId = state.profile.accountId || 'EDU-UNKNOWN';
-        const username = state.profile.username || 'Student';
+        const accountId = state.profile.accountId || 'SS-UNKNOWN';
+        const username = state.profile.username || 'there';
         const cur = EduCurrency.toCode(state.profile.currency);
 
         if (format === 'csv') {
@@ -1198,7 +1349,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `EduFinance_Transactions_${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = `SteadyScale_Transactions_${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
             URL.revokeObjectURL(url);
             showToast('CSV export downloaded successfully!', 'success');
@@ -1207,7 +1358,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let html = `
                 <html>
                 <head>
-                    <title>EduFinance Transaction Log</title>
+                    <title>SteadyScale Transaction Log</title>
                     <style>
                         body { font-family: Inter, sans-serif; padding: 30px; color: #111; }
                         h2 { margin-bottom: 5px; }
@@ -1221,7 +1372,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </style>
                 </head>
                 <body>
-                    <h2>EduFinance Financial Report</h2>
+                    <h2>SteadyScale Financial Report</h2>
                     <div class="meta">
                         <p><strong>Account Holder:</strong> ${escapeHtml(username)} &nbsp;|&nbsp; <strong>Account ID:</strong> ${escapeHtml(accountId)} &nbsp;|&nbsp; <strong>Currency:</strong> ${cur}</p>
                         <p><strong>Generated on:</strong> ${new Date().toLocaleDateString()} &nbsp;|&nbsp; <strong>Total Records:</strong> ${filtered.length}</p>
@@ -1321,27 +1472,157 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     }
 
-    function renderProjections() {
-        if (!projectionResults) return;
+    /* ---------- Monthly cashflow planner (calendar month or custom pay cycle) ---------- */
+    const DAY_MS = 86400000;
+    const p2 = n => String(n).padStart(2, '0');
+    const dayNum = (y, m, d) => Math.floor(Date.UTC(y, m, d) / DAY_MS);          // m is 0-based
+    function dayNumFromISO(iso) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+        return m ? dayNum(+m[1], +m[2] - 1, +m[3]) : NaN;
+    }
+    function isoFromDayNum(n) {
+        const d = new Date(n * DAY_MS);
+        return d.getUTCFullYear() + '-' + p2(d.getUTCMonth() + 1) + '-' + p2(d.getUTCDate());
+    }
+    function fmtShortDate(iso) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+        return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    }
+
+    // Accepts the current shape, or an older "weeks + lump sum" plan (converted to a monthly figure)
+    function normalizeProjection(p) {
+        p = p || {};
+        const cycle = p.cycle === 'biweekly' ? 'biweekly' : 'monthly';
+        let income = parseFloat(p.income);
+        if (!(income >= 0)) {
+            const bulk = parseFloat(p.bulk), weeks = parseFloat(p.weeks);
+            income = (bulk > 0 && weeks > 0) ? bulk / (weeks / (52 / 12)) : 0;
+        }
+        let startDay = parseInt(p.startDay, 10);
+        if (!(startDay >= 1 && startDay <= 28)) startDay = 1;
+        const safetyN = parseFloat(p.safety);
+        return {
+            cycle,
+            startDay,
+            anchor: p.anchor || '',
+            income: Math.round(income * 100) / 100,
+            safety: safetyN >= 0 ? safetyN : 0
+        };
+    }
+
+    // Which pay cycle contains today: start, next start, length, days elapsed and days left (today counts)
+    function getCycleInfo(p, todayISO) {
+        const t = dayNumFromISO(todayISO);
+        let start, next;
+        if (p.cycle === 'biweekly') {
+            let a = dayNumFromISO(p.anchor);
+            if (isNaN(a)) a = t - ((new Date(t * DAY_MS).getUTCDay() + 6) % 7);   // default: this week's Monday
+            start = a + Math.floor((t - a) / 14) * 14;
+            next = start + 14;
+        } else {
+            const parts = todayISO.split('-').map(Number);
+            let sy = parts[0], sm = parts[1] - 1;
+            if (parts[2] < p.startDay) { sm -= 1; if (sm < 0) { sm = 11; sy -= 1; } }
+            let ny = sy, nm = sm + 1;
+            if (nm > 11) { nm = 0; ny += 1; }
+            start = dayNum(sy, sm, p.startDay);
+            next = dayNum(ny, nm, p.startDay);
+        }
+        return {
+            total: next - start,
+            elapsed: t - start + 1,
+            left: next - t,
+            startISO: isoFromDayNum(start),
+            endISO: isoFromDayNum(next - 1)
+        };
+    }
+
+    function cycleTotals(c) {
+        let inc = 0, exp = 0;
+        state.transactions.forEach(t => {
+            const d = t.date || '';
+            if (d < c.startISO || d > c.endISO) return;
+            if (t.type === 'income') { if (!t.isOpeningBalance) inc += t.amount; }
+            else exp += t.amount;
+        });
+        return { inc, exp };
+    }
+
+    function syncCycleFields() {
+        const sel = document.getElementById('planCycle');
+        if (!sel) return;
+        const bi = sel.value === 'biweekly';
+        const sd = document.getElementById('planStartDayGroup');
+        const an = document.getElementById('planAnchorGroup');
+        if (sd) sd.hidden = bi;
+        if (an) an.hidden = !bi;
+    }
+
+    function renderSemesterPlan() {
+        const out = document.getElementById('semesterResults');
+        if (!out) return;
         const weeks = state.projection.weeks || 16;
         const bulk = state.projection.bulk || 4000;
-        const safety = state.projection.safety || 300;
-        const weeklyAllowance = (bulk - safety) / weeks;
-
-        projectionResults.innerHTML = `
+        const safety = state.projection.safety != null ? state.projection.safety : 300;
+        out.innerHTML = `
             <div class="plan-result">
                 <span>You can spend about</span>
-                <strong>${formatCurrency(weeklyAllowance)}</strong>
+                <strong>${formatCurrency((bulk - safety) / weeks)}</strong>
                 <span>each week</span>
             </div>`;
-
         const fill = (id, val) => {
             const el = document.getElementById(id);
             if (el && document.activeElement !== el) el.value = val;
         };
         fill('semesterWeeks', weeks);
         fill('bulkIncome', state.projection.bulk || '');
-        fill('savingsSafety', state.projection.safety != null ? state.projection.safety : 500);
+        fill('studentSafety', state.projection.safety != null ? state.projection.safety : 500);
+    }
+
+    function renderProjections() {
+        if (acctType() === 'student') { renderSemesterPlan(); return; }
+        if (!projectionResults) return;
+        const p = normalizeProjection(state.projection);
+        const c = getCycleInfo(p, localDateString());
+
+        const fill = (id, val) => {
+            const el = document.getElementById(id);
+            if (el && document.activeElement !== el) el.value = val;
+        };
+        fill('planCycle', p.cycle);
+        fill('planStartDay', p.startDay);
+        fill('planAnchor', p.anchor);
+        fill('planIncome', p.income || '');
+        fill('savingsSafety', p.safety);
+        syncCycleFields();
+
+        if (!(p.income > 0)) {
+            projectionResults.innerHTML = `
+                <div class="plan-result">
+                    <span>Enter your expected income each cycle to see how much you can spend each week.</span>
+                </div>`;
+            return;
+        }
+
+        const spendable = p.income - p.safety;
+        const perWeek = Math.max(0, spendable) / (c.total / 7);
+        const spent = cycleTotals(c).exp;
+        const remaining = spendable - spent;
+        const perDayLeft = remaining > 0 ? remaining / c.left : 0;
+
+        projectionResults.innerHTML = `
+            <div class="plan-result">
+                <span>${fmtShortDate(c.startISO)} to ${fmtShortDate(c.endISO)}</span>
+                <span>You can spend about</span>
+                <strong>${formatCurrency(perWeek)}</strong>
+                <span>each week</span>
+            </div>
+            <ul class="plan-stats">
+                <li><span>Day ${c.elapsed} of ${c.total}</span><b>${c.left} ${c.left === 1 ? 'day' : 'days'} left</b></li>
+                <li><span>Spent this cycle</span><b class="num">${formatCurrency(spent)}</b></li>
+                <li><span>Left to spend</span><b class="num ${remaining >= 0 ? 'text-pos' : 'text-neg'}">${formatCurrency(remaining)}</b></li>
+                <li><span>Safe per day from here</span><b class="num">${formatCurrency(perDayLeft)}</b></li>
+            </ul>`;
     }
 
     window.deleteTransaction = function(id) {

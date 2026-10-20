@@ -1,5 +1,5 @@
 /* =========================================
-   EduFinance - Currency helper (shared by login, dashboard, intelligence)
+   SteadyScale - Currency helper (shared by login, dashboard, intelligence)
    - Stores ISO codes ("NGN", "USD") instead of symbols
    - Auto-detects a sensible default from the device (no API calls)
    - Formats with Intl.NumberFormat so symbols/decimals are always right

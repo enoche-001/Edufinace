@@ -1,5 +1,5 @@
 /* =========================================
-   EduFinance - Admin Dashboard (admin.html)
+   SteadyScale - Admin Dashboard (admin.html)
    Uses the same Firebase compat SDK + project as auth.js.
    Admin = a document at admins/{uid} (see FIREBASE_RULES.md).
    ========================================= */
@@ -187,7 +187,7 @@
         }
         S.loading = true;
         $('refreshBtn').classList.add('spin');
-        $('studentBody').innerHTML = '<tr class="empty-row"><td colspan="6">Loading students…</td></tr>';
+        $('studentBody').innerHTML = '<tr class="empty-row"><td colspan="6">Loading users…</td></tr>';
         try {
             const [setSnap, txSnap] = await Promise.all([
                 db.collectionGroup('settings').get(),
@@ -275,7 +275,7 @@
             S.heavyLoaded = true;
             S.lastHeavyLoad = Date.now();
             $('loadError').hidden = true;
-            log('ok', 'Loaded ' + S.students.length + ' student profiles and ' + fmtInt(txCount) + ' transactions');
+            log('ok', 'Loaded ' + S.students.length + ' user profiles and ' + fmtInt(txCount) + ' transactions');
             renderAll();
         } catch (err) {
             log('error', 'User data load failed: ' + err.message);
@@ -284,7 +284,7 @@
             box.textContent = err.code === 'permission-denied'
                 ? 'Permission denied reading user data. Make sure your UID exists in the "admins" collection and the latest rules from FIREBASE_RULES.md are published.'
                 : 'Could not load user data: ' + err.message;
-            $('studentBody').innerHTML = '<tr class="empty-row"><td colspan="6">Could not load students.</td></tr>';
+            $('studentBody').innerHTML = '<tr class="empty-row"><td colspan="6">Could not load users.</td></tr>';
         } finally {
             S.loading = false;
             $('refreshBtn').classList.remove('spin');
@@ -337,7 +337,7 @@
         $('kpiStudents').textContent = fmtInt(A.active30);
         $('statStudentsBig').textContent = fmtInt(S.students.length);
         const idle = S.students.filter(isInactive).length;
-        $('statStudentsSub').innerHTML = S.students.length ? '<b>' + fmtInt(idle) + '</b> inactive for ' + INACTIVE_DAYS + '+ days.' : 'No students yet.';
+        $('statStudentsSub').innerHTML = S.students.length ? '<b>' + fmtInt(idle) + '</b> inactive for ' + INACTIVE_DAYS + '+ days.' : 'No users yet.';
         $('updatedAt').textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const delta = $('kpiStudentsDelta');
         if (A.activePrev30 === 0) {
@@ -381,7 +381,7 @@
                     data: {
                         labels,
                         datasets: [
-                            { label: 'Active students', data: A.actives, backgroundColor: '#4318FF', borderRadius: 8, borderSkipped: false, maxBarThickness: 26 },
+                            { label: 'Active users', data: A.actives, backgroundColor: '#4318FF', borderRadius: 8, borderSkipped: false, maxBarThickness: 26 },
                             { label: 'New sign-ups', data: A.signups, backgroundColor: '#05CD99', borderRadius: 8, borderSkipped: false, maxBarThickness: 26 }
                         ]
                     },
@@ -494,10 +494,10 @@
                 '<td><span class="badge ' + st.cls + '">' + st.label + '</span></td>' +
                 '<td><button class="dots-btn" data-menu="student" data-id="' + esc(s.uid) + '" aria-label="Actions"><i class="fa-solid fa-ellipsis-vertical"></i></button></td>' +
                 '</tr>';
-        }).join('') : '<tr class="empty-row"><td colspan="6">No students match.</td></tr>';
+        }).join('') : '<tr class="empty-row"><td colspan="6">No users match.</td></tr>';
 
         const from = rows.length ? start + 1 : 0;
-        $('pagerInfo').textContent = 'Showing ' + fmtInt(from) + '–' + fmtInt(start + slice.length) + ' of ' + fmtInt(rows.length) + ' students';
+        $('pagerInfo').textContent = 'Showing ' + fmtInt(from) + '–' + fmtInt(start + slice.length) + ' of ' + fmtInt(rows.length) + ' users';
         $('prevPage').disabled = S.page <= 1;
         $('nextPage').disabled = S.page >= pages;
     }
@@ -573,7 +573,7 @@
             const s = S.students.find((x) => x.uid === id);
             if (!s) return;
             items = [
-                s.email && { icon: 'fa-envelope', label: 'Email student', href: 'mailto:' + encodeURIComponent(s.email).replace(/%40/g, '@') },
+                s.email && { icon: 'fa-envelope', label: 'Email user', href: 'mailto:' + encodeURIComponent(s.email).replace(/%40/g, '@') },
                 s.email && { icon: 'fa-copy', label: 'Copy email', copy: s.email },
                 s.username && { icon: 'fa-at', label: 'Copy username', copy: '@' + s.username },
                 { icon: 'fa-fingerprint', label: 'Copy user ID', copy: s.uid }
@@ -674,7 +674,7 @@
             $('replyText').value = '';
 
             // No mail server in this app: hand the reply to the admin's email client.
-            const subject = 'Re: ' + (t.subject || 'Your EduFinance message');
+            const subject = 'Re: ' + (t.subject || 'Your SteadyScale message');
             const url = 'mailto:' + (t.email || '') + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(text);
             if (t.email && url.length < 1900) {
                 toast('Reply saved. Opening your email app…', 'success');
@@ -724,8 +724,8 @@
         scope = scope || 'all';
         const blocks = [];
         if (scope === 'all' || scope === 'students') {
-            if (!S.heavyLoaded && scope === 'students') { toast('Student data is still loading', 'error'); return; }
-            blocks.push(csvBlock('Students', ['Name', 'Username', 'Email', 'Account ID', 'Currency', 'Date Joined', 'Status', 'Last Transaction', 'Transactions', 'User ID'],
+            if (!S.heavyLoaded && scope === 'students') { toast('User data is still loading', 'error'); return; }
+            blocks.push(csvBlock('Users', ['Name', 'Username', 'Email', 'Account ID', 'Currency', 'Date Joined', 'Status', 'Last Transaction', 'Transactions', 'User ID'],
                 S.students.map((s) => [s.name, s.username ? '@' + s.username : '', s.email, s.accountId, s.currency, s.createdAt || '', studentStatus(s).label, s.lastTx, s.txCount, s.uid])));
         }
         if (scope === 'all' || scope === 'support') {
@@ -739,7 +739,7 @@
         const blob = new Blob(['﻿' + blocks.join('\r\n\r\n')], { type: 'text/csv;charset=utf-8;' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'edufinance-' + scope + '-' + new Date().toISOString().slice(0, 10) + '.csv';
+        a.download = 'steadyscale-' + scope + '-' + new Date().toISOString().slice(0, 10) + '.csv';
         document.body.appendChild(a);
         a.click();
         a.remove();

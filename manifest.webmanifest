@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "EduFinance",
-  "short_name": "EduFinance",
-  "description": "Smart student budgeting and semester planning.",
+  "name": "SteadyScale",
+  "short_name": "SteadyScale",
+  "description": "Monthly cash flow planning for earners, freelancers and households.",
   "start_url": "start.html?source=pwa",
   "scope": "./",
   "display": "standalone",
@@ -82,14 +82,14 @@
       "sizes": "390x844",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Plan your whole semester"
+      "label": "Plan your whole month"
     },
     {
       "src": "screenshots/wide-1.png",
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "EduFinance home"
+      "label": "SteadyScale home"
     }
   ],
   "share_target": {

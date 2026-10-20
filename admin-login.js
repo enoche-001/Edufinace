@@ -1,5 +1,5 @@
 /* =========================================
-   EduFinance - Admin Login (admin-login.html)
+   SteadyScale - Admin Login (admin-login.html)
    Email + password only. No sign-up, no Google.
    Signing in succeeds only if admins/{uid} exists; otherwise the
    session is closed immediately.

@@ -1,4 +1,4 @@
-/* EduFinance PWA helper. Loaded on every page.
+/* SteadyScale PWA helper. Loaded on every page.
    - registers the service worker (updates apply silently, no update prompt anywhere)
    - install prompt (Android/desktop) + Add to Home Screen help (iOS)
    - marks installed mode with html.is-standalone
@@ -91,9 +91,9 @@
   /* ---------- install ---------- */
   function showIOSHelp() {
     if (d.getElementById('pwaIOS')) return;
-    var n = el('<div class="pwa-sheet-bg" id="pwaIOS"><div class="pwa-sheet" role="dialog" aria-label="Install EduFinance">' +
+    var n = el('<div class="pwa-sheet-bg" id="pwaIOS"><div class="pwa-sheet" role="dialog" aria-label="Install SteadyScale">' +
       '<button type="button" class="pwa-sheet-x" aria-label="Close">&times;</button>' +
-      '<b>Install EduFinance</b><p>Tap the <em>Share</em> button in Safari, then choose <em>Add to Home Screen</em>.</p>' +
+      '<b>Install SteadyScale</b><p>Tap the <em>Share</em> button in Safari, then choose <em>Add to Home Screen</em>.</p>' +
       '<button type="button" class="pwa-sheet-ok">Got it</button></div></div>');
     function closeSheet() { n.remove(); d.removeEventListener('keydown', onKey); }
     function onKey(e) { if (e.key === 'Escape') closeSheet(); }
@@ -132,7 +132,7 @@
     setTimeout(function () {
       if (!api.canInstall() || d.getElementById('pwaBanner')) return;
       var b = el('<div class="pwa-banner" id="pwaBanner"><img src="icons/icon-192.png" alt="" width="40" height="40">' +
-        '<div><b>Install EduFinance</b><span>Open it like an app, even offline.</span></div>' +
+        '<div><b>Install SteadyScale</b><span>Open it like an app, even offline.</span></div>' +
         '<button type="button" class="pwa-go">Install</button><button type="button" class="pwa-x" aria-label="Dismiss">&times;</button></div>');
       b.querySelector('.pwa-go').onclick = function () { b.remove(); api.install(); };
       b.querySelector('.pwa-x').onclick = function () { set(DISMISS_KEY, String(Date.now())); b.classList.remove('in'); setTimeout(function () { b.remove(); }, 250); };

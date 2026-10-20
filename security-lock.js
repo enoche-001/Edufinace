@@ -1,4 +1,4 @@
-// EduFinance App Lock: PIN + optional fingerprint/face unlock (WebAuthn).
+// SteadyScale App Lock: PIN + optional fingerprint/face unlock (WebAuthn).
 // A privacy screen for a shared or lost phone. The PIN is salted and hashed (PBKDF2-SHA256) and saved to the
 // user's own Firestore document (users/{uid}/security/lock), so every device they sign in on asks for the same PIN.
 // The PIN itself is never stored or sent. Fingerprint unlock and the lock delay stay per device.
@@ -84,8 +84,8 @@
     async function bioEnroll() {
         const cred = await navigator.credentials.create({ publicKey: {
             challenge: crypto.getRandomValues(new Uint8Array(32)),
-            rp: { name: 'EduFinance', id: location.hostname },
-            user: { id: crypto.getRandomValues(new Uint8Array(16)), name: uid, displayName: 'EduFinance user' },
+            rp: { name: 'SteadyScale', id: location.hostname },
+            user: { id: crypto.getRandomValues(new Uint8Array(16)), name: uid, displayName: 'SteadyScale user' },
             pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
             authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' },
             timeout: 60000
@@ -142,8 +142,8 @@
         const unlocking = mode === 'unlock';
         $('lockBio').style.visibility = (unlocking && cfg && cfg.bio) ? 'visible' : 'hidden';
         $('lockLink').textContent = unlocking ? 'Forgot PIN? Sign out' : (firstRun && (mode === 'setup1' || mode === 'setup2') ? 'Skip for now' : 'Cancel');
-        if (!coolUntil || Date.now() >= coolUntil) $('lockSub').textContent = unlocking ? 'EduFinance is locked'
-            : (firstRun && mode === 'setup1' ? 'Set a 4-digit PIN. On this device you will only need this PIN to open EduFinance.' : '4 digits');
+        if (!coolUntil || Date.now() >= coolUntil) $('lockSub').textContent = unlocking ? 'SteadyScale is locked'
+            : (firstRun && mode === 'setup1' ? 'Set a 4-digit PIN. On this device you will only need this PIN to open SteadyScale.' : '4 digits');
     }
 
     function show(m) {

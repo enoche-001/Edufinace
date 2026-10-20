@@ -1,5 +1,5 @@
 /* =========================================
-   EduFinance - Insights AI
+   SteadyScale - Insights AI
    Lives only in the Insights section:
    - AI card at the top of Insights (on/off, level, quick questions)
    - Insight sentences rewritten by Gemini at the user's level

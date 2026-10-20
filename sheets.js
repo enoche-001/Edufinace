@@ -1,5 +1,5 @@
 /* =========================================
-   EduFinance - shared UI helpers for the dashboard
+   SteadyScale - shared UI helpers for the dashboard
    - bottom sheets / dialogs
    - demo (signed-out) gate: blocks saving and asks the visitor to sign up
    - tab-change events

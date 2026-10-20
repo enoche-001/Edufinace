@@ -1,5 +1,5 @@
 /* =========================================
-   EduFinance - First-time setup wizard
+   SteadyScale - First-time setup wizard
    Step 1 (balance) and step 2 (income sources) are required.
    Steps 3-6 can be skipped.
    The app (app.js) decides when to start it and saves the result.
@@ -9,16 +9,17 @@
     const WEEKS_PER_MONTH = 52 / 12;
     const TOTAL_STEPS = 6;
     const REQUIRED_STEPS = { 1: true, 2: true };
-    const DEFAULT_WEEKS = 16;
 
     // Rough share of monthly money each expense usually takes (used only as an editable suggestion)
     const BUDGET_SHARES = {
-        'Tuition & Books': 0.10,
+        'Professional Development': 0.04,
         'Rent & Utilities': 0.30,
-        'Groceries & Food': 0.25,
-        'Transport & Transit': 0.10,
-        'Social & Entertainment': 0.08,
-        'Subscriptions & Tech': 0.07,
+        'Groceries': 0.15,
+        'Dining': 0.08,
+        'Transport': 0.10,
+        'Household & Family': 0.07,
+        'Social & Entertainment': 0.06,
+        'Subscriptions & Tech': 0.05,
         'Health & Personal': 0.05,
         'Miscellaneous': 0.05
     };
@@ -39,55 +40,52 @@
         return Math.round(n / mag) * mag;
     }
 
+    // Monthly equivalent of an amount paid weekly, every two weeks or monthly
+    function toMonthly(amt, freq) {
+        if (freq === 'weekly') return amt * WEEKS_PER_MONTH;
+        if (freq === 'biweekly') return amt * 26 / 12;
+        return amt;
+    }
+
     /**
      * Pure calculation. No DOM.
      * input: {
-     *   startingBalance, weeks,
-     *   sources: { allowance:{amount,freq}, bulk:{amount}, job:{amount,freq}, gifts:{amount} }  (only chosen ones present)
+     *   startingBalance, cycle: 'monthly' | 'biweekly',
+     *   sources: { salary:{amount,freq}, freelance:{amount,freq}, household:{amount}, other:{amount} }  (only chosen ones present)
      * }
      */
     function compute(input) {
-        const weeks = Math.max(1, Math.round(num(input.weeks)) || DEFAULT_WEEKS);
+        const cycle = input.cycle === 'biweekly' ? 'biweekly' : 'monthly';
         const balance = Math.max(0, num(input.startingBalance));
         const src = input.sources || {};
 
-        let regularMonthly = 0;      // allowance + job + bulk spread over the semester
-        let guaranteedSemester = 0;  // money expected over the whole semester, gifts excluded
+        let regularMonthly = 0;      // salary + freelance + household, as a typical month
 
-        ['allowance', 'job'].forEach(key => {
+        ['salary', 'freelance'].forEach(key => {
             const s = src[key];
             if (!s) return;
-            const amt = Math.max(0, num(s.amount));
-            if (s.freq === 'weekly') {
-                regularMonthly += amt * WEEKS_PER_MONTH;
-                guaranteedSemester += amt * weeks;
-            } else {
-                regularMonthly += amt;
-                guaranteedSemester += amt * (weeks / WEEKS_PER_MONTH);
-            }
+            regularMonthly += toMonthly(Math.max(0, num(s.amount)), s.freq);
         });
+        if (src.household) regularMonthly += Math.max(0, num(src.household.amount));
 
-        if (src.bulk) {
-            const amt = Math.max(0, num(src.bulk.amount));
-            regularMonthly += amt / (weeks / WEEKS_PER_MONTH);
-            guaranteedSemester += amt;
-        }
-
-        const irregularMonthly = src.gifts ? Math.max(0, num(src.gifts.amount)) : 0;
+        // Bonuses and irregular money are never counted as guaranteed
+        const irregularMonthly = src.other ? Math.max(0, num(src.other.amount)) : 0;
         const monthlyIncomeEstimate = round2(regularMonthly + irregularMonthly);
 
+        const cycleIncome = cycle === 'biweekly' ? regularMonthly * 12 / 26 : regularMonthly;
+        const cycleDays = cycle === 'biweekly' ? 14 : 365 / 12;
+
         // What suggestions (budgets, buffer) are based on
-        const budgetBase = monthlyIncomeEstimate > 0
-            ? monthlyIncomeEstimate
-            : (balance > 0 ? balance / (weeks / WEEKS_PER_MONTH) : 0);
+        const budgetBase = monthlyIncomeEstimate > 0 ? monthlyIncomeEstimate : balance;
 
         return {
-            weeks,
+            cycle,
+            cycleDays,
             startingBalance: round2(balance),
             regularMonthly: round2(regularMonthly),
             irregularMonthly: round2(irregularMonthly),
             monthlyIncomeEstimate,
-            plannerTotal: Math.round(balance + guaranteedSemester),
+            cycleIncome: round2(cycleIncome),
             budgetBase: round2(budgetBase),
             suggestedBuffer: niceRound(budgetBase * 0.10)
         };
@@ -130,22 +128,27 @@
             });
         });
 
-        // ----- Step 3: weeks -----
-        const weeksInput = $('onbWeeks');
-        const weekChips = $('onbWeekChips').querySelectorAll('.onb-chip');
-        function syncWeekChips() {
-            weekChips.forEach(c => {
-                const on = String(c.dataset.weeks) === String(weeksInput.value);
+        // ----- Step 3: pay cycle -----
+        let cycle = 'monthly';
+        const cycleChips = $('onbCycleChips').querySelectorAll('.onb-chip');
+        const startDayInput = $('onbStartDay');
+        const anchorInput = $('onbAnchor');
+        function syncCycle() {
+            cycleChips.forEach(c => {
+                const on = c.dataset.cycle === cycle;
                 c.classList.toggle('selected', on);
                 c.setAttribute('aria-pressed', String(on));
             });
+            $('onbCycleMonthly').hidden = cycle !== 'monthly';
+            $('onbCycleBiweekly').hidden = cycle !== 'biweekly';
         }
-        weekChips.forEach(c => c.addEventListener('click', () => {
-            weeksInput.value = c.dataset.weeks;
-            syncWeekChips();
+        cycleChips.forEach(c => c.addEventListener('click', () => {
+            cycle = c.dataset.cycle;
+            syncCycle();
             clearError();
         }));
-        weeksInput.addEventListener('input', () => { syncWeekChips(); clearError(); });
+        startDayInput.addEventListener('input', clearError);
+        anchorInput.addEventListener('input', clearError);
 
         // ----- Step 4: budget chips + rows (built from the app's own categories) -----
         const chipBox = $('onbBudgetChips');
@@ -211,17 +214,17 @@
 
         function collectSources() {
             const out = {};
-            if (selectedSources.has('allowance')) out.allowance = { amount: num($('onbAllowanceAmt').value), freq: $('onbAllowanceFreq').value };
-            if (selectedSources.has('bulk')) out.bulk = { amount: num($('onbBulkAmt').value) };
-            if (selectedSources.has('job')) out.job = { amount: num($('onbJobAmt').value), freq: $('onbJobFreq').value };
-            if (selectedSources.has('gifts')) out.gifts = { amount: num($('onbGiftsAmt').value) };
+            if (selectedSources.has('salary')) out.salary = { amount: num($('onbSalaryAmt').value), freq: $('onbSalaryFreq').value };
+            if (selectedSources.has('freelance')) out.freelance = { amount: num($('onbFreelanceAmt').value), freq: $('onbFreelanceFreq').value };
+            if (selectedSources.has('household')) out.household = { amount: num($('onbHouseholdAmt').value) };
+            if (selectedSources.has('other')) out.other = { amount: num($('onbOtherAmt').value) };
             return out;
         }
 
         function currentCalc() {
             return compute({
                 startingBalance: $('onbBalance').value,
-                weeks: skipped[3] ? DEFAULT_WEEKS : weeksInput.value,
+                cycle: skipped[3] ? 'monthly' : cycle,
                 sources: collectSources()
             });
         }
@@ -235,14 +238,14 @@
         function updatePreview() {
             const calc = currentCalc();
             const safety = safetyValue();
-            const weekly = (calc.plannerTotal - safety) / calc.weeks;
+            const weekly = (calc.cycleIncome - safety) / (calc.cycleDays / 7);
             const box = $('onbPreview');
-            if (calc.plannerTotal <= 0) {
-                box.textContent = 'Add your expected money to see a weekly spending amount.';
+            if (calc.cycleIncome <= 0) {
+                box.textContent = 'Add your expected income to see a weekly spending amount.';
             } else if (weekly < 0) {
-                box.textContent = 'Your buffer is bigger than the money you expect this semester. Try a smaller buffer.';
+                box.textContent = 'Your buffer is bigger than the income you expect each cycle. Try a smaller buffer.';
             } else {
-                box.textContent = 'Recommended weekly spending: ' + EduCurrency.format(weekly, currency) + ' over ' + calc.weeks + ' weeks.';
+                box.textContent = 'Recommended weekly spending: ' + EduCurrency.format(weekly, currency) + ' per week.';
             }
         }
 
@@ -255,14 +258,18 @@
             if (n === 2) {
                 if (selectedSources.size === 0) return 'Pick at least one way money reaches you.';
                 const s = collectSources();
-                if (s.allowance && !(s.allowance.amount > 0)) return 'Enter your allowance amount.';
-                if (s.bulk && !(s.bulk.amount > 0)) return 'Enter how much you get once a semester.';
-                if (s.job && !(s.job.amount > 0)) return 'Enter your job or side gig amount.';
-                if (s.gifts && $('onbGiftsAmt').value !== '' && num($('onbGiftsAmt').value) < 0) return 'Gift amount cannot be negative.';
+                if (s.salary && !(s.salary.amount > 0)) return 'Enter your salary or wages amount.';
+                if (s.freelance && !(s.freelance.amount > 0)) return 'Enter your typical freelance or side hustle amount.';
+                if (s.household && !(s.household.amount > 0)) return 'Enter the household contribution amount.';
+                if (s.other && $('onbOtherAmt').value !== '' && num($('onbOtherAmt').value) < 0) return 'Irregular income cannot be negative.';
             }
             if (n === 3) {
-                const w = parseInt(weeksInput.value, 10);
-                if (!(w >= 1 && w <= 52)) return 'Enter a semester length between 1 and 52 weeks.';
+                if (cycle === 'monthly') {
+                    const d = parseInt(startDayInput.value, 10);
+                    if (!(d >= 1 && d <= 28)) return 'Enter a start day between 1 and 28.';
+                } else if (!anchorInput.value) {
+                    return 'Pick the date of your last payday.';
+                }
             }
             if (n === 4) {
                 let msg = '';
@@ -293,10 +300,10 @@
             const src = collectSources();
 
             const incomeSources = [];
-            if (src.allowance) incomeSources.push({ type: 'allowance', amount: src.allowance.amount, frequency: src.allowance.freq });
-            if (src.bulk) incomeSources.push({ type: 'semester', amount: src.bulk.amount, frequency: 'semester' });
-            if (src.job) incomeSources.push({ type: 'job', amount: src.job.amount, frequency: src.job.freq });
-            if (src.gifts) incomeSources.push({ type: 'gifts', amount: src.gifts.amount, frequency: 'irregular' });
+            if (src.salary) incomeSources.push({ type: 'salary', amount: src.salary.amount, frequency: src.salary.freq });
+            if (src.freelance) incomeSources.push({ type: 'freelance', amount: src.freelance.amount, frequency: src.freelance.freq });
+            if (src.household) incomeSources.push({ type: 'household', amount: src.household.amount, frequency: 'monthly' });
+            if (src.other) incomeSources.push({ type: 'irregular', amount: src.other.amount, frequency: 'irregular' });
 
             const budgets = {};
             if (!skipped[4]) {
@@ -322,7 +329,13 @@
                 startingBalance: calc.startingBalance,
                 incomeSources,
                 monthlyIncomeEstimate: calc.monthlyIncomeEstimate,
-                projection: { weeks: calc.weeks, bulk: calc.plannerTotal, safety: Math.round(safetyValue()) },
+                projection: {
+                    cycle: calc.cycle,
+                    startDay: (skipped[3] || calc.cycle !== 'monthly') ? 1 : parseInt(startDayInput.value, 10),
+                    anchor: (!skipped[3] && calc.cycle === 'biweekly') ? anchorInput.value : '',
+                    income: Math.round(calc.cycleIncome),
+                    safety: Math.round(safetyValue())
+                },
                 budgets,
                 goal
             };

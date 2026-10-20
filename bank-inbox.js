@@ -1,5 +1,5 @@
 /* =========================================
-   EduFinance - Bank inbox
+   SteadyScale - Bank inbox
    - Alerts pasted from the Add screen (several at once) land in users/{uid}/bankInbox as "pending".
      The user reviews, edits and adds each one. Nothing is read from any bank.
    ========================================= */

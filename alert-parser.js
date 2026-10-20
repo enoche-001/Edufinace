@@ -1,5 +1,5 @@
 /* =========================================
-   EduFinance - bank alert parser (works offline, no network)
+   SteadyScale - bank alert parser (works offline, no network)
    Turns the text of a bank SMS / email / app notification into
    { amount, type, description, date, bank, ref, category }.
    It never stores the raw text. Used by smart-add.js and bank-link.js.
@@ -24,20 +24,21 @@
 
     // keyword -> app category (the names must match the categories in app.js)
     var EXPENSE_RULES = [
-        [/school\s*fee|tuition|portal|jamb|waec|neco|textbook|\bbooks?\b|bookshop|stationer|photocopy|print(ing)?|hostel\s*fee|\bsug\b|dues/i, 'Tuition & Books'],
+        [/training|workshop|conference|certification|course\s*fee|udemy|coursera|linkedin\s*learning|textbook|\bbooks?\b|bookshop|professional\s*dues|membership\s*fee|\bdues\b/i, 'Professional Development'],
         [/\brent\b|landlord|electric|\bnepa\b|ikedc|ekedc|phed|\bphcn\b|disco|prepaid|meter|\btoken\b|water\s*bill|\bgas\b|utility/i, 'Rent & Utilities'],
-        [/shoprite|spar\b|market|grocer|supermarket|food|restaurant|kitchen|chicken|kfc|dominos|pizza|cafe|bakery|bread|suya|buka|mama\s*put|eatery|chowdeck|glovo|foodcourt|mr\s*biggs|sweet\s*sense|cold\s*stone/i, 'Groceries & Food'],
-        [/\buber\b|\bbolt\b|indrive|indriver|taxi|\bfare\b|transport|\bbus\b|\bpark\b|keke|okada|ride|fuel|petrol|filling\s*station|nnpc|oando|total\s*energies|lagos\s*bus|brt/i, 'Transport & Transit'],
+        [/shoprite|spar\b|market|grocer|supermarket|bakery|bread|provision|foodstuff/i, 'Groceries'],
+        [/restaurant|kitchen|chicken|kfc|dominos|pizza|cafe|suya|buka|mama\s*put|eatery|chowdeck|glovo|foodcourt|mr\s*biggs|sweet\s*sense|cold\s*stone|\bfood\b|lunch|dinner|takeaway/i, 'Dining'],
+        [/\buber\b|\bbolt\b|indrive|indriver|taxi|\bfare\b|transport|\bbus\b|\bpark\b|keke|okada|ride|fuel|petrol|filling\s*station|nnpc|oando|total\s*energies|lagos\s*bus|brt/i, 'Transport'],
+        [/school\s*fees?|daycare|nursery|childcare|household|cleaning|furniture|plumber|repairs?\b/i, 'Household & Family'],
         [/netflix|spotify|showmax|apple|google\s*(play|one)|youtube|prime\s*video|dstv|gotv|startimes|airtime|\bdata\b|\bmtn\b|\bglo\b|airtel|9mobile|etisalat|vtu|bundle|subscription|canva|chatgpt|openai|github|domain|hosting|namecheap/i, 'Subscriptions & Tech'],
         [/pharmacy|chemist|hospital|clinic|medic|drug|health|salon|barber|haircut|hair|spa\b|cosmetic|toiletr/i, 'Health & Personal'],
         [/cinema|movie|club|lounge|bar\b|party|event|ticket|bet9ja|sportybet|betking|game|gaming|concert|outing|hangout|gift/i, 'Social & Entertainment']
     ];
     var INCOME_RULES = [
-        [/nelfund|student\s*loan|\bgrant\b|\bloan\b/i, 'Student Loan / Grant'],
-        [/scholarship|bursary|award/i, 'Scholarship / Bursary'],
-        [/salary|payroll|wages|stipend|\bpay\b/i, 'Part-time Job / Salary'],
-        [/allowance|pocket|mum\b|mummy|mom\b|dad\b|daddy|papa|mama|father|mother|parent|uncle|aunty|auntie|brother|sister|upkeep/i, 'Allowance / Parents'],
-        [/freelance|client|invoice|gig|commission|project|design|logo|website/i, 'Freelance / Side Gig']
+        [/salary|payroll|wages|paycheck|\bpay\b/i, 'Salary'],
+        [/freelance|client|invoice|gig|commission|project|design|logo|website|consult/i, 'Freelance / Side Hustle'],
+        [/mum\b|mummy|mom\b|dad\b|daddy|papa|mama|father|mother|parent|spouse|wife|husband|partner|family|contribution|upkeep/i, 'Household Contributions'],
+        [/interest|dividend|investment|rental\s*income|rent\s*income/i, 'Investments & Interest']
     ];
 
     function pad(n) { return n < 10 ? '0' + n : '' + n; }
@@ -167,8 +168,10 @@
 
     function guessCategory(desc, type) {
         var rules = type === 'income' ? INCOME_RULES : EXPENSE_RULES;
-        for (var i = 0; i < rules.length; i++) if (rules[i][0].test(desc || '')) return rules[i][1];
-        return type === 'income' ? 'Other Income' : 'Miscellaneous';
+        var found = type === 'income' ? 'Other Income' : 'Miscellaneous';
+        for (var i = 0; i < rules.length; i++) if (rules[i][0].test(desc || '')) { found = rules[i][1]; break; }
+        // Student accounts use their own category names
+        return (window.EduApp && window.EduApp.normCategory) ? window.EduApp.normCategory(found) : found;
     }
 
     function parse(text) {

@@ -1,5 +1,5 @@
 /* =========================================
-   EduFinance - Financial Intelligence & AI Layer
+   SteadyScale - Financial Intelligence & AI Layer
    ========================================= */
 
 class FinancialAnalyzer {
@@ -108,7 +108,7 @@ class FinancialAnalyzer {
             }
         });
 
-        // Expected monthly money from the setup wizard (allowance, job, etc.) counts even before it is logged
+        // Expected monthly money from the setup wizard (salary, freelance income, etc.) counts even before it is logged
         const expectedIncome = parseFloat(this.getProfile().monthlyIncomeEstimate) || 0;
         const incomeBase = Math.max(monthlyIncome, expectedIncome);
         const availableMoney = incomeBase > 0 ? incomeBase : (Object.values(this.getBudgets()).reduce((a,b)=>a+b, 0) || monthlySpent || 1);

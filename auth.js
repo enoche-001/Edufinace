@@ -1,5 +1,5 @@
 /* =========================================
-    EduFinance - Auth Script (login.html)
+    SteadyScale - Auth Script (login.html)
     ========================================= */
 
 const firebaseConfig = {
@@ -435,7 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 signingInNow = true;
                 const userCred = await auth.createUserWithEmailAndPassword(email, password);
                 const user = userCred.user;
-                const accountId = 'EDU-' + Math.floor(100000 + Math.random() * 900000);
+                const accountId = 'SS-' + Math.floor(100000 + Math.random() * 900000);
 
                 await user.updateProfile({ displayName: username });
 
@@ -527,11 +527,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 age--;
             }
             if (age < 13) {
-                showToast('You must be at least 13 years old to use EduFinance.', 'error');
+                showToast('You must be at least 13 years old to use SteadyScale.', 'error');
                 return;
             }
 
-            const accountId = 'EDU-' + Math.floor(100000 + Math.random() * 900000);
+            const accountId = 'SS-' + Math.floor(100000 + Math.random() * 900000);
             await pendingGoogleUser.updateProfile({ displayName: username });
 
             try {

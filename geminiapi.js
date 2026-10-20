@@ -1,5 +1,5 @@
 /* =========================================
-   EduFinance - Gemini client (no API key here)
+   SteadyScale - Gemini client (no API key here)
    Calls the secure proxy hosted on Vercel.
    The backend is NOT changed: every call sends { summaryData } and reads { advice }.
    Instructions, level, chat history and figures all travel inside summaryData.
