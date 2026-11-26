@@ -1,0 +1,741 @@
+diff --git a/alert-parser.js b/alert-parser.js
+--- a/alert-parser.js	2026-11-26 09:01:38.984453715 +0100
++++ b/alert-parser.js	2026-11-26 09:03:05.799984974 +0100
+@@ -215,7 +215,7 @@
+         return list;
+     }
+ 
+-    var api = { parse: parse, parseMany: parseMany, looksLikeAlert: looksLikeAlert, guessCategory: guessCategory };
++    var api = { parse: parse, parseMany: parseMany, looksLikeAlert: looksLikeAlert, guessCategory: guessCategory, tidyDescription: tidyDescription };
+     if (typeof module !== 'undefined' && module.exports) module.exports = api;
+     root.EduAlertParser = api;
+ })(typeof window !== 'undefined' ? window : this);
+diff --git a/app.js b/app.js
+--- a/app.js	2026-11-26 09:01:38.985029055 +0100
++++ b/app.js	2026-11-26 09:03:05.804322280 +0100
+@@ -750,6 +750,8 @@
+                 savingsSnap.forEach(doc => batch.delete(doc.ref));
+                 await batch.commit();
+                 await db.collection('users').doc(currentUser.uid).collection('settings').doc('budgets').set({ categories: {} });
++                // Clear the bank inbox so a later bank sync can bring history back in (linked accounts stay linked)
++                try { if (window.EduBankLink && window.EduBankLink.resetAll) await window.EduBankLink.resetAll(); } catch (e) { /* ignore */ }
+             }
+             renderAll();
+             showToast('All data has been reset.', 'success');
+diff --git a/bank-inbox.js b/bank-inbox.js
+--- a/bank-inbox.js	2026-11-26 09:01:38.985327732 +0100
++++ b/bank-inbox.js	2026-11-26 09:03:05.801367162 +0100
+@@ -32,11 +32,14 @@
+         list.forEach(function (r) {
+             // doc id = reference, so the same alert can never be queued twice
+             var id = String(r.ref || r.bankRef || Date.now()).replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 60);
+-            batch.set(userCol('bankInbox').doc(id), {
++            var doc = {
+                 amount: r.amount, type: r.type, description: String(r.description || '').slice(0, 80),
+                 category: r.category || '', date: r.date || todayStr(), bank: String(r.bank || '').slice(0, 30),
+                 bankRef: id, source: source, status: 'pending', createdAt: new Date().toISOString()
+-            });
++            };
++            // Extra fields from bank-link.js (Mono / test accounts). Alerts pasted by hand do not have them.
++            ['provider', 'accountId', 'externalId', 'possibleDuplicate'].forEach(function (k) { if (r[k]) doc[k] = r[k]; });
++            batch.set(userCol('bankInbox').doc(id), doc);
+         });
+         return batch.commit();
+     }
+@@ -50,11 +53,13 @@
+         cat = cat || suggest(it);
+         var batch = db.batch();
+         var note = it.bank ? 'Via ' + it.bank : '';
+-        batch.set(userCol('transactions').doc(), {
++        var tx = {
+             type: it.type, amount: it.amount, description: (desc || it.description || 'Bank transaction').slice(0, 80),
+             category: cat, note: note, date: it.date, createdAt: new Date().toISOString(),
+             source: 'bank', bankRef: it.bankRef
+-        });
++        };
++        ['provider', 'accountId', 'externalId'].forEach(function (k) { if (it[k]) tx[k] = it[k]; });
++        batch.set(userCol('transactions').doc(), tx);
+         batch.update(userCol('bankInbox').doc(it.id), { status: 'imported' });
+         if (window.EduSmartAdd) window.EduSmartAdd.learn(desc || it.description, cat);
+         return batch.commit();
+@@ -84,7 +89,8 @@
+             var cat = suggest(it);
+             return '<div class="bi-item" data-id="' + esc(it.id) + '">' +
+                 '<div class="bi-top"><b class="bi-amt ' + (it.type === 'income' ? 'income' : 'expense') + '">' + (it.type === 'income' ? '+' : '-') + esc(money(it.amount)) + '</b>' +
+-                '<span class="bi-meta">' + esc([it.bank, it.date].filter(Boolean).join(' \u00b7 ')) + '</span></div>' +
++                '<span class="bi-meta">' + esc([it.bank, it.date, it.provider === 'mock' ? 'Test' : ''].filter(Boolean).join(' \u00b7 ')) + '</span></div>' +
++                (it.possibleDuplicate ? '<span class="paste-warn bi-dup">You may have already added this one.</span>' : '') +
+                 '<input type="text" class="form-control bi-desc" maxlength="80" value="' + esc(it.description) + '" aria-label="Description">' +
+                 '<select class="form-control bi-cat" aria-label="Category">' + catOptions(it.type, cat) + '</select>' +
+                 '<div class="bi-actions"><button type="button" class="btn btn-ghost btn-sm" data-act="skip">Skip</button>' +
+diff --git a/bank-link.js b/bank-link.js
+--- a/bank-link.js	1970-01-01 01:00:00.000000000 +0100
++++ b/bank-link.js	2026-11-26 09:02:46.760025393 +0100
+@@ -0,0 +1,572 @@
++/* =========================================
++   SteadyScale - Bank link (Mono Connect + free test mode)
++   - Profile > Bank accounts: link several accounts, sync each, unlink.
++   - mode 'mono': Mono Connect widget -> POST /api/mono-auth { code } -> GET /api/mono-transactions
++   - mode 'mock': fake accounts + fake transactions made on this device (no network, no limits)
++   - Both modes feed the SAME pipeline: normalize -> dedupe -> bankInbox (bank-inbox.js) -> user reviews -> ledger.
++   - Only non-secret metadata is stored: users/{uid}/linkedAccounts/{provider_accountId}.
++     No Mono secret key, no bank login, no full account number ever reaches the browser.
++   Needs: alert-parser.js, app.js (window.EduApp), sheets.js (window.EduUI), bank-inbox.js (window.EduBank)
++   ========================================= */
++(function (root) {
++    'use strict';
++
++    /* ---------- config (edit here, or set window.EDU_BANK_CONFIG before this file loads) ---------- */
++    var CONFIG = {
++        API_BASE: 'https://edufinanceapi.vercel.app',
++        MONO_PUBLIC_KEY: 'test_pk_REPLACE_ME',          // PUBLIC key only (test_pk_... for sandbox). Never put the secret key here.
++        MONO_SCRIPT: 'https://connect.withmono.com/connect.js',
++        AMOUNT_DIVISOR: 100,                            // Mono sends kobo. Use 1 if your backend already converts to naira.
++        MAX_PAGES: 6,                                   // safety cap when paging mono-transactions
++        TIMEOUT_MS: 30000,
++        MOCK_DAYS: 45                                   // how many days of fake history test accounts return
++    };
++    if (root.EDU_BANK_CONFIG) { for (var ck in root.EDU_BANK_CONFIG) { CONFIG[ck] = root.EDU_BANK_CONFIG[ck]; } }
++
++    /* =====================================================================
++       PART 1 - pure logic (no DOM, no Firebase). Unit-testable in Node.
++       ===================================================================== */
++    function pad(n) { return n < 10 ? '0' + n : '' + n; }
++    function ymd(y, m, d) { return y + '-' + pad(m) + '-' + pad(d); }
++    function today() { var n = new Date(); return ymd(n.getFullYear(), n.getMonth() + 1, n.getDate()); }
++    function sanitizeId(s) { return String(s == null ? '' : s).replace(/[^A-Za-z0-9_\-]/g, ''); }
++    function str(x) { return x && typeof x === 'object' ? String(x.name || x.title || '') : String(x == null ? '' : x); }
++    function parser() { return root.EduAlertParser || (typeof globalThis !== 'undefined' ? globalThis.EduAlertParser : null) || null; }
++
++    // 2 hashes joined: stable and short (collisions are not a practical concern at this size)
++    function hashStr(s) {
++        s = String(s); var h = 5381, g = 2166136261;
++        for (var i = 0; i < s.length; i++) {
++            var c = s.charCodeAt(i);
++            h = ((h << 5) + h + c) | 0;
++            g ^= c; g = Math.imul(g, 16777619);
++        }
++        return (h >>> 0).toString(36) + (g >>> 0).toString(36);
++    }
++
++    // The one key that makes re-syncing safe. Becomes bankInbox doc id AND the transaction's bankRef.
++    // Format: <provider>_<accountId>_<transactionId>. If that is longer than 60 chars (the inbox limit), hashes are used instead.
++    function makeRef(provider, accountId, txId) {
++        var a = sanitizeId(accountId), t = sanitizeId(txId);
++        var ref = provider + '_' + a + '_' + t;
++        if (a && t && ref.length <= 60) return ref;
++        return provider + '_' + hashStr(accountId) + '_' + hashStr(txId);
++    }
++
++    // Mono dates are ISO strings, usually midnight UTC. Midnight-UTC / date-only values use the UTC day so a
++    // transaction never slides to the day before; anything with a real time uses the user's local day.
++    function toYmd(v) {
++        if (!v) return today();
++        var s = String(v), d = new Date(s), out;
++        if (isNaN(d.getTime())) { var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[0] : today(); }
++        if (/^\d{4}-\d{2}-\d{2}$/.test(s) || /T00:00:00(\.0+)?(Z|\+00:00)$/.test(s)) out = ymd(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate());
++        else out = ymd(d.getFullYear(), d.getMonth() + 1, d.getDate());
++        return out > today() ? today() : out;
++    }
++
++    function tidy(raw, type) {
++        var P = parser();
++        var fallback = type === 'income' ? 'Bank credit' : 'Bank debit';
++        var out = '';
++        if (P && P.tidyDescription) out = P.tidyDescription(raw, type);
++        else out = String(raw || '').replace(/\b\d{6,}\b/g, ' ').replace(/[\/|_]+/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, 60);
++        return out || fallback;
++    }
++
++    function bankLabel(acc) {
++        var last4 = acc.last4 ? ' ••' + acc.last4 : '';
++        return ((acc.institution || 'Bank') + last4).slice(0, 30);
++    }
++
++    // One Mono (or mock) transaction -> the shape bank-inbox.js / the ledger already use.
++    function normalizeOne(raw, account, seen) {
++        if (!raw || typeof raw !== 'object') return null;
++        var amt = Number(raw.amount);
++        if (!isFinite(amt) || amt === 0) return null;
++        var kind = String(raw.type || '').toLowerCase();
++        var type = (kind === 'credit' || kind === 'cr') ? 'income' : (kind === 'debit' || kind === 'dr') ? 'expense' : (amt < 0 ? 'expense' : null);
++        if (!type) return null;
++        var amount = Math.round(Math.abs(amt) / (CONFIG.AMOUNT_DIVISOR || 1) * 100) / 100;
++        if (!(amount > 0)) return null;
++
++        var date = toYmd(raw.date || raw.created_at || raw.createdAt);
++        var narration = String(raw.narration || raw.description || raw.reference || '');
++        var txId = raw._id || raw.id || raw.transactionId;
++        if (!txId) {   // no id from the provider: derive a stable one; identical rows in one batch get a counter
++            var key = [date, amt, kind, narration, raw.balance == null ? '' : raw.balance].join('|');
++            seen = seen || {};
++            seen[key] = (seen[key] || 0) + 1;
++            txId = 'x' + hashStr(key) + (seen[key] > 1 ? 'n' + seen[key] : '');
++        }
++        var description = tidy(narration, type);
++        var P = parser();
++        return {
++            ref: makeRef(account.provider, account.accountId, txId),
++            externalId: String(txId),
++            provider: account.provider,
++            accountId: String(account.accountId),
++            amount: amount,
++            type: type,
++            description: description,
++            category: P && P.guessCategory ? P.guessCategory(description + ' ' + narration, type) : '',
++            date: date,
++            bank: bankLabel(account)
++        };
++    }
++
++    function normalizeMany(list, account) {
++        var out = [], inBatch = {}, seen = {};
++        (Array.isArray(list) ? list : []).forEach(function (raw) {
++            var n = normalizeOne(raw, account, seen);
++            if (!n || inBatch[n.ref]) return;       // provider returned the same row twice (e.g. across pages)
++            inBatch[n.ref] = 1; out.push(n);
++        });
++        return out;
++    }
++
++    // known = { ref: 1 } built from the ledger AND every bankInbox doc (pending, imported, skipped).
++    function dedupe(items, known) {
++        var fresh = [], already = 0;
++        items.forEach(function (it) { if (known[it.ref]) already++; else fresh.push(it); });
++        return { fresh: fresh, already: already };
++    }
++
++    // Same type + amount + day as something the user added from another source (pasted alert, manual entry).
++    function markPossibleDuplicates(items, ledger) {
++        var idx = {};
++        (ledger || []).forEach(function (t) {
++            if (t.bankRef && /^(mono|mock)_/.test(t.bankRef)) return;
++            idx[t.type + '|' + Number(t.amount).toFixed(2) + '|' + t.date] = 1;
++        });
++        items.forEach(function (it) { if (idx[it.type + '|' + it.amount.toFixed(2) + '|' + it.date]) it.possibleDuplicate = true; });
++        return items;
++    }
++
++    // Accepts whatever shape /api/mono-auth returns: { id }, { data:{id} }, { account:{ _id, institution:{name}, ... } } ...
++    function pickAccount(resp, hint) {
++        var d = resp && typeof resp === 'object' ? resp : {};
++        var inner = d.data && typeof d.data === 'object' && !Array.isArray(d.data) ? d.data : d;
++        var acc = inner.account && typeof inner.account === 'object' ? inner.account : inner;
++        var id = inner.id || inner.accountId || inner._id || acc.id || acc._id || acc.accountId;
++        if (!id) return null;
++        var inst = str(acc.institution) || str(inner.institution) || str(acc.bankName) || hint || 'Bank account';
++        var num = String(acc.accountNumber || acc.account_number || inner.accountNumber || '').replace(/\D/g, '');
++        return {
++            provider: 'mono', accountId: String(id), institution: inst.slice(0, 40),
++            accountName: str(acc.name) || str(acc.accountName) || '', last4: num.slice(-4),
++            currency: str(acc.currency) || 'NGN'
++        };
++    }
++
++    /* ----- mock provider: deterministic fake data in Mono's own response shape (kobo, debit/credit, ISO date) ----- */
++    var MOCK_BANKS = ['GTBank', 'Kuda', 'Opay', 'Access Bank', 'Zenith Bank', 'Moniepoint'];
++    var MOCK_DEBITS = [
++        ['POS/SHOPRITE IKEJA', 3500, 18000], ['UBER TRIP LAGOS', 1200, 6500], ['BOLT RIDE', 900, 4500],
++        ['NIP/TRF TO ADAEZE OKORO/LUNCH', 1500, 7000], ['MTN AIRTIME VTU', 500, 3000], ['CHOWDECK ORDER', 2500, 9000],
++        ['PHCN PREPAID TOKEN', 5000, 15000], ['PHARMACY MEDPLUS', 1800, 9000], ['KFC SURULERE', 3200, 8200],
++        ['USSD/TRF TO CHIDI OKAFOR', 2000, 15000]
++    ];
++    var MOCK_CREDITS = [['NIP/TRF FROM MUM', 10000, 50000], ['TRF FROM CLIENT/INVOICE 112', 25000, 120000]];
++
++    function rng(seed) {
++        var a = parseInt(hashStr(seed).slice(0, 6), 36) | 0;
++        return function () {
++            a = (a + 0x6D2B79F5) | 0;
++            var t = Math.imul(a ^ (a >>> 15), 1 | a);
++            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
++            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
++        };
++    }
++    function between(r, lo, hi) { return Math.round((lo + r() * (hi - lo)) / 50) * 50; }
++
++    // Same account + same day always gives the same ids, so re-syncing returns the same rows
++    // (and a later sync adds only the days that have passed since).
++    function mockTransactions(account, now) {
++        now = now || new Date();
++        var out = [];
++        for (var back = CONFIG.MOCK_DAYS - 1; back >= 0; back--) {
++            var day = new Date(now.getFullYear(), now.getMonth(), now.getDate() - back);
++            var key = ymd(day.getFullYear(), day.getMonth() + 1, day.getDate());
++            var iso = new Date(Date.UTC(day.getFullYear(), day.getMonth(), day.getDate())).toISOString();
++            var r = rng(account.accountId + key), n = 0;
++            function push(narr, naira, type) {
++                out.push({ _id: 'd' + key.replace(/-/g, '') + 'n' + (n++), narration: narr, amount: Math.round(naira * 100), type: type, balance: null, date: iso });
++            }
++            if (r() < 0.6) { var a = MOCK_DEBITS[Math.floor(r() * MOCK_DEBITS.length)]; push(a[0], between(r, a[1], a[2]), 'debit'); }
++            if (r() < 0.25) { var b = MOCK_DEBITS[Math.floor(r() * MOCK_DEBITS.length)]; push(b[0], between(r, b[1], b[2]), 'debit'); }
++            if (r() < 0.06) { var c = MOCK_CREDITS[Math.floor(r() * MOCK_CREDITS.length)]; push(c[0], between(r, c[1], c[2]), 'credit'); }
++            if (day.getDate() === 25) push('SALARY ACME LTD', 250000, 'credit');
++            if (day.getDate() === 5) push('NETFLIX.COM', 4400, 'debit');
++        }
++        return out;
++    }
++
++    var api = {
++        CONFIG: CONFIG, makeRef: makeRef, toYmd: toYmd, normalizeOne: normalizeOne, normalizeMany: normalizeMany,
++        dedupe: dedupe, markPossibleDuplicates: markPossibleDuplicates, pickAccount: pickAccount, mockTransactions: mockTransactions
++    };
++    if (typeof module !== 'undefined' && module.exports) module.exports = api;
++    root.EduBankLink = api;
++
++    if (typeof document === 'undefined') return;
++
++    /* =====================================================================
++       PART 2 - browser: Linked Accounts UI, Mono widget, sync
++       ===================================================================== */
++    var $ = function (id) { return document.getElementById(id); };
++    var db, auth, uid = null, accounts = [], unsub = null;
++    var mode = 'mono', busy = {}, linking = false;
++
++    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c]; }); }
++    function toast(m, t) { if (root.EduApp) root.EduApp.toast(m, t || 'info'); }
++    function userCol(name) { return db.collection('users').doc(uid).collection(name); }
++    function docId(a) { return a.provider + '_' + sanitizeId(a.accountId); }
++    function ledger() { return (root.EduApp && root.EduApp.transactions()) || []; }
++    function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
++
++    function ago(iso) {
++        if (!iso) return 'Not synced yet';
++        var m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
++        if (m < 1) return 'Synced just now';
++        if (m < 60) return 'Synced ' + m + ' min ago';
++        if (m < 1440) return 'Synced ' + Math.round(m / 60) + ' h ago';
++        return 'Synced ' + Math.round(m / 1440) + ' d ago';
++    }
++
++    /* ----- mode (per user, per device) ----- */
++    function modeKey() { return 'edu_bank_mode_v1_' + (uid || 'guest'); }
++    function loadMode() { try { var m = localStorage.getItem(modeKey()); mode = m === 'mock' ? 'mock' : 'mono'; } catch (e) { mode = 'mono'; } }
++    function setMode(m) {
++        mode = m === 'mock' ? 'mock' : 'mono';
++        try { localStorage.setItem(modeKey(), mode); } catch (e) {}
++        render();
++    }
++
++    /* ----- backend calls ----- */
++    function getToken() {
++        var u = auth && auth.currentUser;
++        return u ? u.getIdToken() : Promise.reject({ code: 'auth' });
++    }
++    function apiFetch(path, opts) {
++        return getToken().then(function (token) {
++            var ctrl = new AbortController(), timer = setTimeout(function () { ctrl.abort(); }, CONFIG.TIMEOUT_MS);
++            opts = opts || {};
++            opts.headers = Object.assign({ 'Authorization': 'Bearer ' + token }, opts.headers || {});
++            opts.signal = ctrl.signal;
++            return fetch(CONFIG.API_BASE + path, opts).then(function (res) {
++                return res.text().then(function (txt) {
++                    var body = null; try { body = txt ? JSON.parse(txt) : null; } catch (e) {}
++                    if (!res.ok) throw { code: 'http', status: res.status, body: body };
++                    return body;
++                });
++            }).catch(function (e) {
++                if (e && e.code) throw e;
++                throw { code: e && e.name === 'AbortError' ? 'timeout' : 'network' };
++            }).then(function (v) { clearTimeout(timer); return v; }, function (e) { clearTimeout(timer); throw e; });
++        });
++    }
++    function friendly(e) {
++        if (!e) return 'Something went wrong. Please try again.';
++        if (e.code === 'auth') return 'Please sign in again.';
++        if (e.code === 'timeout') return 'The bank took too long to answer. Try again.';
++        if (e.code === 'network') return 'No connection. Check your internet and try again.';
++        if (e.code === 'inbox') return 'The bank inbox is not ready yet. Refresh the page and try again.';
++        if (e.code === 'unexpected') return 'The server reply was not what the app expected.';
++        if (e.code === 'http') {
++            if (e.status === 401) return 'Your session expired. Sign in again.';
++            if (e.status === 429) return 'Too many requests. Wait a minute and try again.';
++            if (e.status === 404) return 'That bank account was not found.';
++            if (e.status === 403) return 'The bank needs you to reconnect this account.';
++            return 'The bank service is unavailable (' + e.status + '). Try again later.';
++        }
++        if (e.permission) return 'Could not save. Check the Firestore rules for linkedAccounts.';
++        return 'Something went wrong. Please try again.';
++    }
++
++    function extractList(r) {
++        if (Array.isArray(r)) return r;
++        if (!r) return [];
++        if (Array.isArray(r.data)) return r.data;
++        if (r.data && Array.isArray(r.data.data)) return r.data.data;
++        if (Array.isArray(r.transactions)) return r.transactions;
++        return [];
++    }
++    function paging(r) { return (r && (r.paging || r.meta || (r.data && (r.data.paging || r.data.meta)))) || {}; }
++
++    function fetchMono(accountId) {
++        var all = [], seen = {};
++        function page(n) {
++            var q = '/api/mono-transactions?accountId=' + encodeURIComponent(accountId) + (n > 1 ? '&page=' + n : '');
++            return apiFetch(q, { method: 'GET' }).then(function (res) {
++                var list = extractList(res), fresh = 0;
++                list.forEach(function (t) {
++                    var id = t && (t._id || t.id);
++                    if (id) { if (seen[id]) return; seen[id] = 1; }
++                    all.push(t); fresh++;
++                });
++                var p = paging(res);
++                var more = !!p.next || (p.total && all.length < p.total);
++                if (more && fresh > 0 && n < CONFIG.MAX_PAGES) return page(n + 1);   // stops if the server ignores ?page
++                return all;
++            });
++        }
++        return page(1);
++    }
++
++    function fetchRaw(acc) {
++        if (acc.provider === 'mock') return Promise.resolve(mockTransactions(acc));
++        return fetchMono(acc.accountId);
++    }
++
++    /* ----- inbox plumbing ----- */
++    function knownRefs() {
++        var set = {};
++        ledger().forEach(function (t) { if (t.bankRef) set[t.bankRef] = 1; });
++        return userCol('bankInbox').get().then(function (snap) {   // pending + imported + skipped: nothing is ever re-queued
++            snap.forEach(function (d) { set[d.id] = 1; });
++            return set;
++        });
++    }
++    function addChunks(items, source) {
++        if (!items.length) return Promise.resolve();
++        if (!root.EduBank) return Promise.reject({ code: 'inbox' });
++        var p = Promise.resolve();
++        for (var i = 0; i < items.length; i += 400) {
++            (function (part) { p = p.then(function () { return root.EduBank.addToInbox(part, source); }); })(items.slice(i, i + 400));
++        }
++        return p;
++    }
++    function chunkDelete(refs) {
++        var p = Promise.resolve();
++        for (var i = 0; i < refs.length; i += 400) {
++            (function (part) { p = p.then(function () { var b = db.batch(); part.forEach(function (r) { b.delete(r); }); return b.commit(); }); })(refs.slice(i, i + 400));
++        }
++        return p;
++    }
++    function refsWhere(col, field, val) {
++        return userCol(col).where(field, '==', val).get().then(function (s) { var r = []; s.forEach(function (d) { r.push(d.ref); }); return r; });
++    }
++
++    /* ----- sync one account ----- */
++    function syncAccount(acc) {
++        if (busy[acc.id]) return Promise.resolve(null);
++        busy[acc.id] = true; render();
++        return fetchRaw(acc).then(function (raw) {
++            var items = normalizeMany(raw, acc);
++            return knownRefs().then(function (known) {
++                var split = dedupe(items, known);
++                markPossibleDuplicates(split.fresh, ledger());
++                return addChunks(split.fresh, acc.provider).then(function () { return split; });
++            });
++        }).then(function (split) {
++            var n = split.fresh.length;
++            return userCol('linkedAccounts').doc(acc.id).update({
++                lastSyncAt: new Date().toISOString(), lastSyncCount: n, status: 'active'
++            }).catch(function () {}).then(function () { return { added: n, already: split.already }; });
++        }).catch(function (e) {
++            var reauth = e && e.code === 'http' && (e.status === 403 || /reauth/i.test(JSON.stringify(e.body || '')));
++            if (reauth) userCol('linkedAccounts').doc(acc.id).update({ status: 'reauth' }).catch(function () {});
++            toast(friendly(e), 'error');
++            return null;
++        }).then(function (res) { busy[acc.id] = false; render(); return res; });
++    }
++
++    function syncReport(acc, res) {
++        if (!res) return;
++        toast(res.added ? plural(res.added, 'new transaction') + ' from ' + acc.institution : 'Up to date. Nothing new from ' + acc.institution + '.', res.added ? 'success' : 'info');
++    }
++
++    function syncAll() {
++        if (EduGate('Sign up to link your bank.')) return;
++        var list = accounts.filter(function (a) { return a.provider === mode && a.status !== 'reauth'; });
++        var added = 0, p = Promise.resolve();
++        list.forEach(function (a) { p = p.then(function () { return syncAccount(a).then(function (r) { if (r) added += r.added; }); }); });
++        p.then(function () { toast(added ? plural(added, 'new transaction') + ' from ' + plural(list.length, 'account') : 'Everything is up to date.', added ? 'success' : 'info'); });
++    }
++
++    /* ----- link ----- */
++    function saveAccount(meta) {
++        var id = docId(meta), exists = accounts.some(function (a) { return a.id === id; });
++        var data = {
++            provider: meta.provider, accountId: meta.accountId, institution: meta.institution, accountName: meta.accountName || '',
++            last4: meta.last4 || '', currency: meta.currency || 'NGN', status: 'active'
++        };
++        if (!exists) { data.linkedAt = new Date().toISOString(); data.lastSyncAt = null; data.lastSyncCount = 0; }
++        return userCol('linkedAccounts').doc(id).set(data, { merge: true }).then(function () {
++            return Object.assign({ id: id }, data);
++        }, function (e) { e.permission = true; throw e; });
++    }
++
++    function afterLink(acc, existed) {
++        return syncAccount(acc).then(function (res) {
++            if (existed) { toast('That account was already linked. Synced it again.', 'info'); return; }
++            syncReport(acc, res);
++            if (res && res.added && root.EduBank) root.EduBank.openInbox();
++        });
++    }
++
++    function linkMock() {
++        var used = accounts.filter(function (a) { return a.provider === 'mock'; }).map(function (a) { return a.institution; });
++        var bank = MOCK_BANKS.filter(function (b) { return used.indexOf(b) === -1; })[0] || MOCK_BANKS[used.length % MOCK_BANKS.length];
++        var rand = Math.random().toString(36).slice(2, 7);
++        var meta = {
++            provider: 'mock', accountId: 'tst' + Date.now().toString(36).slice(-4) + rand, institution: bank,
++            accountName: 'Test account', last4: String(1000 + Math.floor(Math.random() * 9000)), currency: 'NGN'
++        };
++        linking = true; render();
++        saveAccount(meta).then(function (acc) { return afterLink(acc, false); })
++            .catch(function (e) { toast(friendly(e), 'error'); })
++            .then(function () { linking = false; render(); });
++    }
++
++    function monoCtor() { var C = root.Connect || root.MonoConnect; return C && (C.default || C); }
++    function loadMono() {
++        return new Promise(function (resolve, reject) {
++            if (monoCtor()) return resolve(monoCtor());
++            var s = document.createElement('script');
++            s.src = CONFIG.MONO_SCRIPT; s.async = true;
++            s.onload = function () { monoCtor() ? resolve(monoCtor()) : reject({ code: 'widget' }); };
++            s.onerror = function () { reject({ code: 'widget' }); };
++            document.head.appendChild(s);
++        });
++    }
++
++    function linkMono() {
++        if (!CONFIG.MONO_PUBLIC_KEY || /REPLACE_ME/.test(CONFIG.MONO_PUBLIC_KEY)) {
++            toast('Add your Mono public key in bank-link.js, or switch to Test data.', 'error'); return;
++        }
++        linking = true; render();
++        var hint = '', handled = false;
++        function done() { linking = false; render(); }
++        loadMono().then(function (Connect) {
++            var widget = new Connect({
++                key: CONFIG.MONO_PUBLIC_KEY, scope: 'auth',
++                onSuccess: function (r) {
++                    handled = true;
++                    var code = r && r.code;
++                    if (!code) { toast('The bank did not return a link code. Try again.', 'error'); return done(); }
++                    apiFetch('/api/mono-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code }) })
++                        .then(function (resp) {
++                            var meta = pickAccount(resp, hint);
++                            if (!meta) { if (root.console) console.warn('mono-auth: no account id in reply, keys =', resp && Object.keys(resp)); throw { code: 'unexpected' }; }
++                            var existed = accounts.some(function (a) { return a.id === docId(meta); });
++                            return saveAccount(meta).then(function (acc) { return afterLink(acc, existed); });
++                        })
++                        .catch(function (e) { toast(friendly(e), 'error'); })
++                        .then(done);
++                },
++                onClose: function () { if (!handled) done(); },
++                onEvent: function (name, data) {
++                    try { var n = data && (str(data.institution) || data.institutionName || data.bankName); if (n) hint = String(n); } catch (e) {}
++                }
++            });
++            widget.setup(); widget.open();
++        }).catch(function () { toast('Could not load the Mono window. Check your connection, or use Test data.', 'error'); done(); });
++    }
++
++    function onLink() {
++        if (EduGate('Sign up to link your bank.')) return;
++        if (linking) return;
++        if (mode === 'mock') linkMock(); else linkMono();
++    }
++    function EduGate(msg) { return root.EduUI ? root.EduUI.gate(msg) : false; }
++
++    function unlink(acc) {
++        var tail = acc.provider === 'mock' ? '' : ' Transactions you already added stay in your list.';
++        if (!window.confirm('Unlink ' + acc.institution + '?' + tail)) return;
++        userCol('linkedAccounts').doc(acc.id).delete()
++            .then(function () { toast('Account unlinked', 'info'); })
++            .catch(function () { toast('Could not unlink. Try again.', 'error'); });
++    }
++
++    // Removes every test account, test inbox item and test transaction. Real data is untouched.
++    function clearTest() {
++        if (!window.confirm('Remove all test accounts and the test transactions made from them (including ones you already added)?')) return;
++        var mine = accounts.filter(function (a) { return a.provider === 'mock'; }).map(function (a) { return userCol('linkedAccounts').doc(a.id); });
++        Promise.all([refsWhere('bankInbox', 'provider', 'mock'), refsWhere('transactions', 'provider', 'mock')])
++            .then(function (r) { return chunkDelete(mine.concat(r[0], r[1])); })
++            .then(function () { toast('Test data removed', 'success'); })
++            .catch(function () { toast('Could not remove test data. Try again.', 'error'); });
++    }
++
++    // Called by app.js when the user resets all data, so a later sync can bring history back in.
++    function resetAll() {
++        if (!uid) return Promise.resolve();
++        return userCol('bankInbox').get().then(function (s) { var r = []; s.forEach(function (d) { r.push(d.ref); }); return chunkDelete(r); });
++    }
++
++    /* ----- UI ----- */
++    function render() {
++        var box = $('blList'); if (!box) return;
++        var segs = document.querySelectorAll('#blMode .seg-btn');
++        Array.prototype.forEach.call(segs, function (b) { var on = b.dataset.mode === mode; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on); });
++        var note = $('blModeNote');
++        if (note) note.textContent = mode === 'mock'
++            ? 'Test mode: fake accounts and transactions made on this device. Nothing touches a real bank. They show in your bank inbox marked Test.'
++            : 'Link an account with Mono. We keep only the bank name and a reference ID, never your bank login. New transactions land in your bank inbox for you to review.';
++
++        var list = accounts.filter(function (a) { return a.provider === mode; })
++            .sort(function (a, b) { return String(a.linkedAt || '').localeCompare(String(b.linkedAt || '')); });
++        if (!list.length) {
++            box.innerHTML = '<p class="empty">' + (mode === 'mock' ? 'No test accounts yet. Tap the button to add one.' : 'No bank linked yet.') + '</p>';
++        } else {
++            box.innerHTML = list.map(function (a) {
++                var meta = [a.last4 ? '••' + a.last4 : '', a.status === 'reauth' ? 'Reconnect needed' : ago(a.lastSyncAt),
++                    a.lastSyncAt && a.lastSyncCount ? a.lastSyncCount + ' new' : ''].filter(Boolean).join(' · ');
++                return '<div class="bl-item" data-id="' + esc(a.id) + '">' +
++                    '<span class="bl-ico"><i class="fa-solid fa-building-columns"></i></span>' +
++                    '<div class="bl-main"><b>' + esc(a.institution) + (a.provider === 'mock' ? ' <span class="chip bl-chip">Test</span>' : '') + '</b>' +
++                    '<small' + (a.status === 'reauth' ? ' class="bl-warn"' : '') + '>' + esc(meta) + '</small></div>' +
++                    '<div class="bl-actions"><button type="button" class="btn btn-ghost btn-sm" data-act="sync"' + (busy[a.id] || a.status === 'reauth' ? ' disabled' : '') + '>' +
++                    (busy[a.id] ? 'Syncing...' : 'Sync') + '</button>' +
++                    '<button type="button" class="link-btn" data-act="unlink"' + (busy[a.id] ? ' disabled' : '') + '>Unlink</button></div></div>';
++            }).join('');
++        }
++        var link = $('blLink');
++        if (link) {
++            link.disabled = linking;
++            link.innerHTML = linking ? 'Working...' : '<i class="fa-solid fa-link"></i> ' + (list.length ? 'Link another account' : 'Link bank account');
++        }
++        var all = $('blSyncAll'); if (all) all.hidden = list.length < 2;
++        var clr = $('blClear'); if (clr) clr.hidden = !(mode === 'mock' && accounts.some(function (a) { return a.provider === 'mock'; }));
++    }
++
++    function bind() {
++        var seg = $('blMode'); if (!seg) return false;
++        seg.addEventListener('click', function (e) { var b = e.target.closest('[data-mode]'); if (b) setMode(b.dataset.mode); });
++        $('blLink').addEventListener('click', onLink);
++        $('blSyncAll').addEventListener('click', syncAll);
++        $('blClear').addEventListener('click', clearTest);
++        $('blList').addEventListener('click', function (e) {
++            var btn = e.target.closest('[data-act]'); if (!btn || btn.disabled) return;
++            var id = btn.closest('.bl-item').dataset.id;
++            var acc = accounts.filter(function (a) { return a.id === id; })[0]; if (!acc) return;
++            if (btn.dataset.act === 'sync') { if (!EduGate('Sign up to link your bank.')) syncAccount(acc).then(function (r) { syncReport(acc, r); }); }
++            else unlink(acc);
++        });
++        return true;
++    }
++
++    function listen(u) {
++        if (unsub) { unsub(); unsub = null; }
++        accounts = []; busy = {}; linking = false;
++        uid = u ? u.uid : null;
++        loadMode(); render();
++        if (!uid) return;
++        unsub = userCol('linkedAccounts').onSnapshot(function (snap) {
++            accounts = []; snap.forEach(function (d) { accounts.push(Object.assign({ id: d.id }, d.data())); });
++            render();
++        }, function (err) {
++            if (root.console) console.warn('linkedAccounts listener failed:', err && err.code);
++            var box = $('blList'); if (box) box.innerHTML = '<p class="empty">Could not load linked accounts. Check your connection.</p>';
++        });
++    }
++
++    document.addEventListener('DOMContentLoaded', function () {
++        if (!root.firebase || !firebase.apps.length || !root.EduUI || !root.EduApp) return;
++        db = firebase.firestore(); auth = firebase.auth();
++        if (!bind()) return;
++        root.EduBankLink = Object.assign(api, { setMode: setMode, getMode: function () { return mode; }, syncAll: syncAll, resetAll: resetAll });
++        auth.onAuthStateChanged(listen);
++    });
++})(typeof window !== 'undefined' ? window : this);
+diff --git a/dashboard.html b/dashboard.html
+--- a/dashboard.html	2026-11-26 09:01:38.986118617 +0100
++++ b/dashboard.html	2026-11-26 09:03:05.802988622 +0100
+@@ -11,7 +11,7 @@
+     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+     <link rel="stylesheet" href="dashboard.css?v=20261010q">
+-    <link rel="stylesheet" href="smart-add.css?v=20261018a">
++    <link rel="stylesheet" href="smart-add.css?v=20261126a">
+     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+@@ -565,8 +565,16 @@
+ 
+                 <div class="stack" id="profileSideStack">
+                     <div class="card" data-auth="user" id="bankLinkCard">
+-                        <div class="sec-head"><h2>Bank alerts</h2></div>
+-                        <p class="bank-card-status">To add bank transactions, copy the alert from your bank SMS or email, then tap Paste bank alert on the Add screen. You can review and edit it before it is saved.</p>
++                        <div class="sec-head"><h2>Bank accounts</h2><button type="button" class="link-btn" id="blSyncAll" hidden>Sync all</button></div>
++                        <div class="seg bl-mode" id="blMode" role="group" aria-label="Connection mode">
++                            <button type="button" class="seg-btn active" data-mode="mono">Live bank</button>
++                            <button type="button" class="seg-btn" data-mode="mock">Test data</button>
++                        </div>
++                        <p class="bank-card-status" id="blModeNote"></p>
++                        <div class="bl-list" id="blList"></div>
++                        <button type="button" class="btn btn-primary btn-full" id="blLink"><i class="fa-solid fa-link"></i> Link bank account</button>
++                        <button type="button" class="link-btn bl-clear" id="blClear" hidden>Remove test accounts and data</button>
++                        <p class="bank-card-status bl-foot">You can also copy an alert from your bank SMS or email and tap Paste bank alert on the Add screen. Everything is reviewed in your bank inbox before it is saved.</p>
+                     </div>
+                     <details class="card fold-card">
+                         <summary>Change password</summary>
+@@ -1025,13 +1033,14 @@
+ <script src="insights-ai.js?v=20261014a"></script>
+ <script src="onboarding.js?v=20261010a"></script>
+ <script src="onboarding-student.js?v=20261020a"></script>
+-<script src="alert-parser.js?v=20261016a"></script>
++<script src="alert-parser.js?v=20261126a"></script>
+ <script src="app.js?v=20261016a"></script>
+ <script src="mobile-nav.js?v=20261010a"></script>
+ <script src="debts.js?v=20261010a"></script>
+ <script src="badges.js?v=20261010a"></script>
+ <script src="security-lock.js?v=20261010d"></script>
+ <script src="smart-add.js?v=20261016a"></script>
+-<script src="bank-inbox.js?v=20261019b"></script>
++<script src="bank-inbox.js?v=20261126a"></script>
++<script src="bank-link.js?v=20261126a"></script>
+ </body>
+ </html>
+diff --git a/smart-add.css b/smart-add.css
+--- a/smart-add.css	2026-11-26 09:01:38.990069115 +0100
++++ b/smart-add.css	2026-11-26 09:03:05.803357458 +0100
+@@ -57,3 +57,23 @@
+ .link-demo { display: flex; flex-direction: column; gap: 8px; padding: 14px 0; }
+ .demo-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+ .bank-card-status { font-size: 0.86rem; color: var(--muted); margin-bottom: 12px; }
++
++/* Linked bank accounts (Profile > Bank accounts) */
++.bl-mode { margin-bottom: 10px; }
++.bl-list { margin-bottom: 12px; }
++.bl-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
++.bl-item:last-child { border-bottom: 0; }
++.bl-ico { flex: 0 0 auto; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: var(--brand-soft); color: var(--brand); }
++.bl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
++.bl-main b { font-size: 0.92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.bl-main small { font-size: 0.76rem; color: var(--muted); }
++.bl-warn { color: var(--warn) !important; font-weight: 600; }
++.bl-chip { background: var(--warn-soft); color: var(--warn); padding: 2px 8px; font-size: 0.68rem; vertical-align: 1px; }
++.bl-actions { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
++.bl-actions .link-btn { padding: 2px 0; font-size: 0.78rem; color: var(--muted); }
++.bl-actions .link-btn:hover { color: var(--neg); }
++.bl-actions [disabled] { opacity: 0.5; pointer-events: none; }
++.bl-clear { display: block; margin: 10px auto 0; padding: 4px 0; color: var(--muted); }
++.bl-clear[hidden], #blSyncAll[hidden] { display: none !important; }
++.bl-foot { margin: 14px 0 0; font-size: 0.8rem; }
++.bi-dup { font-size: 0.78rem; }
+diff --git a/sw.js b/sw.js
+--- a/sw.js	2026-11-26 09:01:38.990799329 +0100
++++ b/sw.js	2026-11-26 09:03:05.803894477 +0100
+@@ -1,6 +1,6 @@
+ /* SteadyScale service worker: offline app shell + safe runtime caching.
+    Bump VERSION whenever you deploy changed files so installed apps update. */
+-const VERSION = 'steadyscale-v2.1.0';
++const VERSION = 'steadyscale-v2.2.0';
+ const SHELL = VERSION + '-shell';
+ const RUNTIME = VERSION + '-runtime';
+ 
+@@ -9,7 +9,7 @@
+   'style.css', 'dashboard.css', 'site.css', 'pwa.css',
+   'app.js', 'auth.js', 'demo-data.js', 'sheets.js', 'currency.js', 'geminiapi.js', 'intelligence.js',
+   'insights-ai.js', 'onboarding.js', 'onboarding-student.js', 'mobile-nav.js', 'debts.js', 'badges.js', 'security-lock.js', 'pwa.js',
+-  'alert-parser.js', 'smart-add.js', 'bank-inbox.js', 'smart-add.css',
++  'alert-parser.js', 'smart-add.js', 'bank-inbox.js', 'bank-link.js', 'smart-add.css',
+   'manifest.webmanifest', 'favicon.svg', 'icons/icon-192.png', 'icons/icon-512.png'
+ ];
+ 
