@@ -750,6 +750,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 savingsSnap.forEach(doc => batch.delete(doc.ref));
                 await batch.commit();
                 await db.collection('users').doc(currentUser.uid).collection('settings').doc('budgets').set({ categories: {} });
+                // Clear the bank inbox so a later bank sync can bring history back in (linked accounts stay linked)
+                try { if (window.EduBankLink && window.EduBankLink.resetAll) await window.EduBankLink.resetAll(); } catch (e) { /* ignore */ }
             }
             renderAll();
             showToast('All data has been reset.', 'success');

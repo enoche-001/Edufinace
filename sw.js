@@ -1,6 +1,6 @@
 /* SteadyScale service worker: offline app shell + safe runtime caching.
    Bump VERSION whenever you deploy changed files so installed apps update. */
-const VERSION = 'steadyscale-v2.1.0';
+const VERSION = 'steadyscale-v2.2.0';
 const SHELL = VERSION + '-shell';
 const RUNTIME = VERSION + '-runtime';
 
@@ -9,7 +9,7 @@ const CORE = [
   'style.css', 'dashboard.css', 'site.css', 'pwa.css',
   'app.js', 'auth.js', 'demo-data.js', 'sheets.js', 'currency.js', 'geminiapi.js', 'intelligence.js',
   'insights-ai.js', 'onboarding.js', 'onboarding-student.js', 'mobile-nav.js', 'debts.js', 'badges.js', 'security-lock.js', 'pwa.js',
-  'alert-parser.js', 'smart-add.js', 'bank-inbox.js', 'smart-add.css',
+  'alert-parser.js', 'smart-add.js', 'bank-inbox.js', 'bank-link.js', 'smart-add.css',
   'manifest.webmanifest', 'favicon.svg', 'icons/icon-192.png', 'icons/icon-512.png'
 ];
 

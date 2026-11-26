@@ -57,3 +57,23 @@
 .link-demo { display: flex; flex-direction: column; gap: 8px; padding: 14px 0; }
 .demo-btns { display: flex; gap: 8px; flex-wrap: wrap; }
 .bank-card-status { font-size: 0.86rem; color: var(--muted); margin-bottom: 12px; }
+
+/* Linked bank accounts (Profile > Bank accounts) */
+.bl-mode { margin-bottom: 10px; }
+.bl-list { margin-bottom: 12px; }
+.bl-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.bl-item:last-child { border-bottom: 0; }
+.bl-ico { flex: 0 0 auto; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: var(--brand-soft); color: var(--brand); }
+.bl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.bl-main b { font-size: 0.92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bl-main small { font-size: 0.76rem; color: var(--muted); }
+.bl-warn { color: var(--warn) !important; font-weight: 600; }
+.bl-chip { background: var(--warn-soft); color: var(--warn); padding: 2px 8px; font-size: 0.68rem; vertical-align: 1px; }
+.bl-actions { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.bl-actions .link-btn { padding: 2px 0; font-size: 0.78rem; color: var(--muted); }
+.bl-actions .link-btn:hover { color: var(--neg); }
+.bl-actions [disabled] { opacity: 0.5; pointer-events: none; }
+.bl-clear { display: block; margin: 10px auto 0; padding: 4px 0; color: var(--muted); }
+.bl-clear[hidden], #blSyncAll[hidden] { display: none !important; }
+.bl-foot { margin: 14px 0 0; font-size: 0.8rem; }
+.bi-dup { font-size: 0.78rem; }

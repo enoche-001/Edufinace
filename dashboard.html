@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="dashboard.css?v=20261010q">
-    <link rel="stylesheet" href="smart-add.css?v=20261018a">
+    <link rel="stylesheet" href="smart-add.css?v=20261126a">
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -565,8 +565,16 @@
 
                 <div class="stack" id="profileSideStack">
                     <div class="card" data-auth="user" id="bankLinkCard">
-                        <div class="sec-head"><h2>Bank alerts</h2></div>
-                        <p class="bank-card-status">To add bank transactions, copy the alert from your bank SMS or email, then tap Paste bank alert on the Add screen. You can review and edit it before it is saved.</p>
+                        <div class="sec-head"><h2>Bank accounts</h2><button type="button" class="link-btn" id="blSyncAll" hidden>Sync all</button></div>
+                        <div class="seg bl-mode" id="blMode" role="group" aria-label="Connection mode">
+                            <button type="button" class="seg-btn active" data-mode="mono">Live bank</button>
+                            <button type="button" class="seg-btn" data-mode="mock">Test data</button>
+                        </div>
+                        <p class="bank-card-status" id="blModeNote"></p>
+                        <div class="bl-list" id="blList"></div>
+                        <button type="button" class="btn btn-primary btn-full" id="blLink"><i class="fa-solid fa-link"></i> Link bank account</button>
+                        <button type="button" class="link-btn bl-clear" id="blClear" hidden>Remove test accounts and data</button>
+                        <p class="bank-card-status bl-foot">You can also copy an alert from your bank SMS or email and tap Paste bank alert on the Add screen. Everything is reviewed in your bank inbox before it is saved.</p>
                     </div>
                     <details class="card fold-card">
                         <summary>Change password</summary>
@@ -1025,13 +1033,14 @@
 <script src="insights-ai.js?v=20261014a"></script>
 <script src="onboarding.js?v=20261010a"></script>
 <script src="onboarding-student.js?v=20261020a"></script>
-<script src="alert-parser.js?v=20261016a"></script>
+<script src="alert-parser.js?v=20261126a"></script>
 <script src="app.js?v=20261016a"></script>
 <script src="mobile-nav.js?v=20261010a"></script>
 <script src="debts.js?v=20261010a"></script>
 <script src="badges.js?v=20261010a"></script>
 <script src="security-lock.js?v=20261010d"></script>
 <script src="smart-add.js?v=20261016a"></script>
-<script src="bank-inbox.js?v=20261019b"></script>
+<script src="bank-inbox.js?v=20261126a"></script>
+<script src="bank-link.js?v=20261126a"></script>
 </body>
 </html>

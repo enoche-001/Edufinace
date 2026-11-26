@@ -215,7 +215,7 @@
         return list;
     }
 
-    var api = { parse: parse, parseMany: parseMany, looksLikeAlert: looksLikeAlert, guessCategory: guessCategory };
+    var api = { parse: parse, parseMany: parseMany, looksLikeAlert: looksLikeAlert, guessCategory: guessCategory, tidyDescription: tidyDescription };
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     root.EduAlertParser = api;
 })(typeof window !== 'undefined' ? window : this);
